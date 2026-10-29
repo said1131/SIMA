@@ -1,32 +1,53 @@
-# React + TypeScript + Vite
+# Nombre del proyecto: 
+SIMA
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+# Equipo :
+-Aviles Cruz Oswaldo Said
+-Chi Rodríguez Karla Jhoana
+-Chim Balam Edgar Joaquin
+-Rocha Vajello Jessica
 
-Currently, two official plugins are available:
+# Problema: 
+El problema principal es que no tienen un registro formal de los vehículos que entran Actualmente, todo lo anotan en libretas. Esta situacion afecta a todos ya que causa errores de organizacion, perdida de informacion y mucha confucion al momento de saber que reparacion o servicio se le hizo a cada automovil
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+# Flujo Seleccionado: 
+1.- El cliente consulta el catálogo desde el móvil.
+2.- El cliente solicita una cita y envía datos de su vehiculo.
+3.- La API valida la solicitud y guarda.
+4.- El encargado en el taller ve la cita en la aplicación web y la confirma, el cliente ve la confirmación en su móvil.
+5.- El vehículo llega al taller y el encargado crea la orden de trabajo.
+6.- Se registra el diagnóstico y la cotización.
+7.- El cliente revisa la cotización en el móvil y la autoriza.
+8.- El taller actualiza el estado de reparación y el cliente puede verlo en su móvil.
+9.- Al entregar el vehiculo la orden se cierra y se guarda en el historial.
 
-## React Compiler
+# Mapa de navegacion:
+![alt text](<docs/Mapa de sitio.jpeg>)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+# Bocetos:
+![alt text](docs/mock/Catalogo.jpeg) 
+![alt text](<docs/mock/Citas Solicitadas.jpeg>) 
+![alt text](docs/mock/Dashboard.jpeg) 
+![alt text](<docs/mock/Descrpcion de la orden.jpeg>)
+![alt text](<docs/mock/Inicio de sesion.jpeg>) 
+![alt text](<docs/mock/Ordenes de trabajo.jpeg>)
 
-## Expanding the Oxlint configuration
+#Capturas del proyecto:
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+# Tecnologías utilizadas:
+- Frontend: React + TypeScript
+- Herramienta de construcción: Vite
+- Linter: Oxlint
+- Control de versiones: Git y GitHub
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
-
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+# Estructura del proyecto:
+SIMA/
+├── public/              
+├── src/
+│   ├── assets/          
+│   ├── components/      
+│   ├── App.tsx          
+│   └── main.tsx         
+├── package.json         
+├── tsconfig.json        
+└── vite.config.ts      
