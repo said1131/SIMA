@@ -44,10 +44,16 @@ El problema principal es que no tienen un registro formal de los vehículos que 
 SIMA/
 ├── public/              
 ├── src/
-│   ├── assets/          
-│   ├── components/      
-│   ├── App.tsx          
-│   └── main.tsx         
+│   ├── assets/        
+│   ├── components/     
+│   ├── data/           
+│   ├── models/         
+│   ├── pages/         
+│   ├── services/       
+│   ├── util/      
+│   ├── App.tsx   
+│   ├── index.tsx    
+│   └── styles.css      
 ├── package.json         
 ├── tsconfig.json        
 └── vite.config.ts      
