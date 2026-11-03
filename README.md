@@ -22,15 +22,15 @@ El problema principal es que no tienen un registro formal de los vehículos que 
 9.- Al entregar el vehiculo la orden se cierra y se guarda en el historial.
 
 # Mapa de navegacion:
-![alt text](<docs/Mapa de sitio.jpeg>)
+![alt text](</web/docs/Mapa de sitio.jpeg>)
 
 # Bocetos:
-![alt text](docs/mock/Catalogo.jpeg) 
-![alt text](<docs/mock/Citas Solicitadas.jpeg>) 
-![alt text](docs/mock/Dashboard.jpeg) 
-![alt text](<docs/mock/Descrpcion de la orden.jpeg>)
-![alt text](<docs/mock/Inicio de sesion.jpeg>) 
-![alt text](<docs/mock/Ordenes de trabajo.jpeg>)
+![alt teweb/xt](/docs/mock/Catalogo.jpeg) 
+![alt text](</web/docs/mock/Citas Solicitadas.jpeg>) 
+![alt text](/web/docs/mock/Dashboard.jpeg) 
+![alt text](</web/docs/mock/Descrpcion de la orden.jpeg>)
+![alt text](</web/docs/mock/Inicio de sesion.jpeg>) 
+![alt text](</web/docs/mock/Ordenes de trabajo.jpeg>)
 
 #Capturas del proyecto:
 
@@ -42,18 +42,25 @@ El problema principal es que no tienen un registro formal de los vehículos que 
 
 # Estructura del proyecto:
 SIMA/
-├── public/              
-├── src/
-│   ├── assets/        
-│   ├── components/     
-│   ├── data/           
-│   ├── models/         
-│   ├── pages/         
-│   ├── services/       
-│   ├── util/      
-│   ├── App.tsx   
-│   ├── index.tsx    
-│   └── styles.css      
-├── package.json         
-├── tsconfig.json        
-└── vite.config.ts      
+├── movile/
+│   ├── andorid/
+│   ├── ios/
+│   ├── lib/
+
+├── web/
+    ├── public/  
+    ├──docs/            
+    ├── src/
+    │   ├── assets/        
+    │   ├── components/     
+    │   ├── data/           
+    │   ├── models/         
+    │   ├── pages/         
+    │   ├── services/       
+    │   ├── util/      
+    │   ├── App.tsx   
+    │   ├── index.tsx    
+    │   └── styles.css      
+    ├── package.json         
+    ├── tsconfig.json        
+    └── vite.config.ts   
