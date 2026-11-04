@@ -1,0 +1,126 @@
+==> src/models/Cita.ts <==
+export type EstadoCita = 'Solicitada' | 'Confirmada' | 'Rechazada'
+
+export class Cita {
+  readonly id: number
+  readonly cliente: string
+  readonly vehiculo: string
+  readonly servicio: string
+  readonly fecha: string
+  readonly hora: string
+  readonly estado: EstadoCita
+  readonly idOrden?: string
+
+  constructor(
+    id: number,
+    cliente: string,
+    vehiculo: string,
+    servicio: string,
+    fecha: string,
+    hora: string,
+    estado: EstadoCita,
+    idOrden?: string,
+  ) {
+    this.id = id
+    this.cliente = cliente
+    this.vehiculo = vehiculo
+    this.servicio = servicio
+    this.fecha = fecha
+    this.hora = hora
+    this.estado = estado
+    this.idOrden = idOrden
+  }
+
+  conEstado(estado: EstadoCita, idOrden = this.idOrden): Cita {
+    return new Cita(this.id, this.cliente, this.vehiculo, this.servicio, this.fecha, this.hora, estado, idOrden)
+  }
+}
+==> src/models/OrdenTrabajo.ts <==
+export type EstadoOrdenTrabajo = 'En diagnóstico' | 'Cotizada' | 'En reparación' | 'Lista para entregar'
+
+export class OrdenTrabajo {
+  readonly id: string
+  readonly cliente: string
+  readonly vehiculo: string
+  readonly placas: string
+  readonly servicio: string
+  readonly estado: EstadoOrdenTrabajo
+  readonly fecha: string
+  readonly total: number
+
+  constructor(
+    id: string,
+    cliente: string,
+    vehiculo: string,
+    placas: string,
+    servicio: string,
+    estado: EstadoOrdenTrabajo,
+    fecha: string,
+    total: number,
+  ) {
+    this.id = id
+    this.cliente = cliente
+    this.vehiculo = vehiculo
+    this.placas = placas
+    this.servicio = servicio
+    this.estado = estado
+    this.fecha = fecha
+    this.total = total
+  }
+
+  conEstado(estado: EstadoOrdenTrabajo): OrdenTrabajo {
+    return new OrdenTrabajo(this.id, this.cliente, this.vehiculo, this.placas, this.servicio, estado, this.fecha, this.total)
+  }
+}
+==> src/models/PaginaAdmin.ts <==
+export type PaginaAdmin = 'inicio' | 'citas' | 'ordenes' | 'catalogo' | 'detalle'
+
+export type PaginaNavegacion = Exclude<PaginaAdmin, 'detalle'>
+==> src/models/ServicioTaller.ts <==
+export class ServicioTaller {
+  readonly nombre: string
+  readonly descripcion: string
+  readonly precio: number
+  readonly activo: boolean
+
+  constructor(
+    nombre: string,
+    descripcion: string,
+    precio: number,
+    activo: boolean,
+  ) {
+    this.nombre = nombre
+    this.descripcion = descripcion
+    this.precio = precio
+    this.activo = activo
+  }
+
+  alternarActivo(): ServicioTaller {
+    return new ServicioTaller(this.nombre, this.descripcion, this.precio, !this.activo)
+  }
+}
+==> src/data/datosTaller.ts <==
+import { Cita } from '../models/Cita'
+import { ServicioTaller } from '../models/ServicioTaller'
+import { OrdenTrabajo } from '../models/OrdenTrabajo'
+
+export const citasIniciales = [
+  new Cita(1, 'Mariana López', 'Nissan Versa 2021', 'Cambio de aceite', 'Hoy, 29 oct', '09:30', 'Solicitada'),
+  new Cita(2, 'Carlos Méndez', 'Honda Civic 2019', 'Revisión de frenos', 'Hoy, 29 oct', '11:00', 'Solicitada'),
+  new Cita(3, 'Paola Sánchez', 'Mazda 3 2022', 'Afinación', 'Hoy, 29 oct', '13:30', 'Confirmada'),
+  new Cita(4, 'Jorge Ramírez', 'VW Jetta 2018', 'Diagnóstico general', 'Mañana, 30 oct', '10:00', 'Solicitada'),
+]
+
+export const ordenesIniciales = [
+  new OrdenTrabajo('OT-0248', 'Ana Torres', 'Toyota Corolla 2020', 'YZA-482-B', 'Servicio de frenos', 'En diagnóstico', '29 oct, 08:42', 0),
+  new OrdenTrabajo('OT-0247', 'Luis Herrera', 'Ford Focus 2017', 'UVB-190-A', 'Afinación mayor', 'En reparación', '28 oct, 16:15', 4850),
+  new OrdenTrabajo('OT-0246', 'Daniela Cruz', 'Kia Rio 2022', 'WXC-735-C', 'Cambio de aceite', 'Lista para entregar', '28 oct, 11:20', 1650),
+  new OrdenTrabajo('OT-0245', 'Roberto Díaz', 'Chevrolet Aveo 2019', 'PQR-621-D', 'Revisión de suspensión', 'Cotizada', '27 oct, 14:50', 3200),
+]
+
+export const serviciosIniciales = [
+  new ServicioTaller('Cambio de aceite', 'Aceite y filtro de motor', 950, true),
+  new ServicioTaller('Afinación básica', 'Revisión y mantenimiento preventivo', 1800, true),
+  new ServicioTaller('Revisión de frenos', 'Inspección de balatas y discos', 650, true),
+  new ServicioTaller('Diagnóstico general', 'Escaneo y revisión multipunto', 500, false),
+]
