@@ -36,25 +36,16 @@ class _GarageScreenState extends State<GarageScreen> {
     final proximaCita = datos.citas.isNotEmpty ? datos.citas.first : null;
 
     return Scaffold(
-appBar: AppBar(
+      appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0.5,
-        title: Row(
+        title: const Row(
           children: [
-            Image.asset(
-              'assets/images/logo.png',
-              height: 28,
-              fit: BoxFit.contain,
-              errorBuilder: (_, _, _) => const Text(
-                'SIMA',
-                style: TextStyle(color: rojoSima, fontWeight: FontWeight.w900, fontSize: 18),
-              ),
-            ),
-            const SizedBox(width: 10),
-            const Text(
-              'Mi Garage',
-              style: TextStyle(color: azulSima, fontWeight: FontWeight.bold, fontSize: 16),
-            ),
+            Icon(Icons.settings, color: azulSima, size: 22),
+            SizedBox(width: 6),
+            Text('SIMA', style: TextStyle(color: rojoSima, fontWeight: FontWeight.w900, fontSize: 18)),
+            SizedBox(width: 10),
+            Text('Mi Garage', style: TextStyle(color: azulSima, fontWeight: FontWeight.bold, fontSize: 16)),
           ],
         ),
         actions: [
@@ -175,17 +166,24 @@ appBar: AppBar(
                   Text('Marca ${vehiculoActivo.marca} · Modelo ${vehiculoActivo.modelo} · Año ${vehiculoActivo.anio}',
                       style: TextStyle(fontSize: 12, color: Colors.grey[600])),
                   const SizedBox(height: 12),
-                  Container(
-                    height: 120,
+Container(
+                    height: 140,
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(colors: [Color(0xFF102566), Color(0xFF2848A8)]),
                       borderRadius: BorderRadius.circular(12),
+                      image: vehiculoActivo.fotoBytes != null
+                          ? DecorationImage(
+                              image: MemoryImage(vehiculoActivo.fotoBytes!),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
                     ),
                     child: Stack(
                       children: [
-                        const Center(child: Icon(Icons.directions_car_filled, color: Colors.white54, size: 76)),
+                        if (vehiculoActivo.fotoBytes == null)
+                          const Center(child: Icon(Icons.directions_car_filled, color: Colors.white54, size: 76)),
                         Align(
                           alignment: Alignment.bottomLeft,
                           child: _badgeInfo(vehiculoActivo.kilometraje),

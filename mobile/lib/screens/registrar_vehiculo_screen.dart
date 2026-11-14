@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/vehiculo_model.dart';
 import '../services/datos.dart';
+import 'dart:typed_data';
+import 'package:image_picker/image_picker.dart';
 
 class RegistrarVehiculoScreen extends StatefulWidget {
   final Vehiculo? vehiculoEditar;
@@ -18,6 +20,7 @@ class _RegistrarVehiculoScreenState extends State<RegistrarVehiculoScreen> {
   final _anioCtrl = TextEditingController();
   final _placasCtrl = TextEditingController();
   final _kmCtrl = TextEditingController();
+  Uint8List? _fotoBytes;
 
   final List<String> _marcas = ['Toyota', 'Chevrolet', 'Nissan', 'Volkswagen', 'Honda', 'Ford', 'Kia'];
 
@@ -31,6 +34,18 @@ class _RegistrarVehiculoScreenState extends State<RegistrarVehiculoScreen> {
       _anioCtrl.text = v.anio;
       _placasCtrl.text = v.placas;
       _kmCtrl.text = v.kilometraje;
+      _fotoBytes = v.fotoBytes;
+    }
+  }
+
+  Future<void> _seleccionarFoto() async {
+    final picker = ImagePicker();
+    final XFile? archivo = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    if (archivo != null) {
+      final bytes = await archivo.readAsBytes();
+      setState(() {
+        _fotoBytes = bytes;
+      });
     }
   }
 
@@ -52,14 +67,40 @@ class _RegistrarVehiculoScreenState extends State<RegistrarVehiculoScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              height: 110,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Color(0xFF102566), Color(0xFF2848A8)]),
-                borderRadius: BorderRadius.circular(14),
+            GestureDetector(
+              onTap: _seleccionarFoto,
+              child: Container(
+                height: 140,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [Color(0xFF102566), Color(0xFF2848A8)]),
+                  borderRadius: BorderRadius.circular(14),
+                  image: _fotoBytes != null
+                    ? DecorationImage(image: MemoryImage(_fotoBytes!), fit: BoxFit.cover)
+                    :null,
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    color: _fotoBytes != null ? Colors.black.withValues(alpha: 0.25) : Colors.transparent,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        _fotoBytes != null ? Icons.camera_alt : Icons.add_a_photo_outlined,
+                        color: Colors.white,
+                        size: 38,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _fotoBytes != null ? 'Cambiar foto del vehículo' : 'Subir foto del vehículo (opcional)',
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              child: const Center(child: Icon(Icons.directions_car_outlined, color: Colors.white, size: 54)),
             ),
             const SizedBox(height: 18),
             const Text('Marca', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
@@ -107,6 +148,8 @@ class _RegistrarVehiculoScreenState extends State<RegistrarVehiculoScreen> {
                     anio: _anioCtrl.text.isEmpty ? '2024' : _anioCtrl.text,
                     placas: _placasCtrl.text.isEmpty ? 'SIN-000' : _placasCtrl.text,
                     kilometraje: _kmCtrl.text.isEmpty ? '0 km' : _kmCtrl.text,
+                    ultimoServicio: esEdicion ? widget.vehiculoEditar!.ultimoServicio : 'Sin registro',
+                    fotoBytes: _fotoBytes,
                   );
                   if (esEdicion && widget.indexEditar != null) {
                     DatosSima().actualizarVehiculo(widget.indexEditar!, nuevo);

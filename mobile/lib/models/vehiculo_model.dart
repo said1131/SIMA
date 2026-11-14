@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 class Vehiculo {
   String id;
   String marca;
@@ -6,6 +7,7 @@ class Vehiculo {
   String placas;
   String kilometraje;
   String ultimoServicio;
+  Uint8List? fotoBytes; // Foto opcional del auto
 
   Vehiculo({
     required this.id,
@@ -15,6 +17,7 @@ class Vehiculo {
     required this.placas,
     required this.kilometraje,
     this.ultimoServicio = 'Sin registro',
+    this.fotoBytes,
   });
 
   String get nombreCompleto => '$marca $modelo $anio';
