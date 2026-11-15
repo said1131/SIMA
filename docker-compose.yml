@@ -1,0 +1,80 @@
+# =====================================================================
+#  SIMA · entorno de desarrollo completo con UN comando:
+#      docker compose up --build
+#  Levanta: SQL Server + creación automática de la BD + API (Node).
+#  Funciona igual en cualquier computadora con Docker. No requiere instalar SQL Server.
+# =====================================================================
+name: sima
+
+services:
+  # ---------------- Base de datos ----------------
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64            # en Mac con chip Apple funciona con emulación (Rosetta)
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-Sima_Dev_2026!}
+    ports:
+      # Puerto 14330 en tu PC para no chocar con un SQL Server que ya tengas instalado en el 1433
+      - "${DB_HOST_PORT:-14330}:1433"
+    volumes:
+      - sima_db_data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\" -b -o /dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+      start_period: 20s
+    restart: unless-stopped
+
+  # ---------------- Crea la BD y las tablas (corre una vez y termina) ----------------
+  db-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-Sima_Dev_2026!}
+      API_DB_PASSWORD: ${API_DB_PASSWORD:-Sima_Api_2026!}
+    volumes:
+      - ./db/init:/init:ro
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        set -e
+        for f in /init/*.sql; do
+          echo ">> Ejecutando $$f"
+          /opt/mssql-tools18/bin/sqlcmd -C -S db -U sa -P "$$MSSQL_SA_PASSWORD" \
+            -f 65001 -b -v API_PASSWORD="$$API_DB_PASSWORD" -i "$$f"
+        done
+        echo "✔ Base de datos SIMADB lista."
+    restart: "no"
+
+  # ---------------- API REST (Node + TypeScript) ----------------
+  api:
+    build: ./backend
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    environment:
+      PORT: 3000
+      DB_SERVER: db
+      DB_PORT: 1433
+      DB_NAME: SIMADB
+      DB_USER: sima_api
+      DB_PASSWORD: ${API_DB_PASSWORD:-Sima_Api_2026!}
+      DB_ENCRYPT: "false"
+      JWT_SECRET: ${JWT_SECRET:-sima-dev-secret-cambialo-en-produccion-123456}
+      JWT_EXPIRES_IN: 8h
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-taller@sima.mx}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-sima1234}
+      SEED_DEMO: ${SEED_DEMO:-true}
+    ports:
+      - "${API_PORT:-3000}:3000"
+    restart: on-failure
+
+volumes:
+  sima_db_data:

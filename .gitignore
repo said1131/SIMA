@@ -1,1 +1,21 @@
-backend/node_modules/
+# Dependencias y compilados
+node_modules/
+dist/
+build/
+
+# Secretos y configuración local (nunca al repo)
+.env
+.env.*
+!.env.example
+
+# Flutter
+mobile/.dart_tool/
+mobile/build/
+mobile/.flutter-plugins*
+mobile/.packages
+
+# Sistema / editor
+.DS_Store
+Thumbs.db
+*.log
+*.tar.gz
