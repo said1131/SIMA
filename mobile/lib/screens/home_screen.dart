@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'cotizaciones_screen.dart';
 import 'garage_screen.dart';
+import 'historial_screen.dart';
+import 'ordenes_taller_screen.dart';
 import 'servicios_citas_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -17,9 +20,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final pantallas = [
       GarageScreen(irAServicios: () => setState(() => _indice = 1)),
       const ServiciosCitasScreen(),
-      const Center(child: Text('En Taller')),
-      const Center(child: Text('Cotizaciones')),
-      const Center(child: Text('Historial')),
+      const OrdenesTallerScreen(),
+      const CotizacionesScreen(),
+      const HistorialScreen(),
     ];
 
     return Scaffold(
@@ -48,7 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return GestureDetector(
       onTap: () => setState(() => _indice = idx),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: activo ? Colors.white : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
@@ -61,7 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Text(
               label,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: FontWeight.bold,
                 color: activo ? const Color(0xFF102566) : Colors.white,
               ),

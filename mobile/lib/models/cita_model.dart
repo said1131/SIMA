@@ -8,6 +8,7 @@ class Cita {
   final String notas;
   final String estado;
   final String? motivoRechazo;
+  final bool expres;
 
   Cita({
     required this.id,
@@ -19,5 +20,23 @@ class Cita {
     this.notas = '',
     this.estado = 'Solicitada',
     this.motivoRechazo,
+    this.expres = false,
   });
+
+  int get idNumerico => int.tryParse(id) ?? 0;
+
+  factory Cita.fromJson(Map<String, dynamic> json) {
+    return Cita(
+      id: (json['id'] ?? '').toString(),
+      servicio: (json['servicio'] ?? '').toString(),
+      vehiculo: (json['vehiculo'] ?? '').toString(),
+      placas: (json['placas'] ?? '').toString(),
+      fecha: (json['fecha'] ?? '').toString(),
+      hora: (json['hora'] ?? '').toString(),
+      notas: (json['notas'] ?? '').toString(),
+      estado: (json['estado'] ?? 'Solicitada').toString(),
+      motivoRechazo: json['motivoRechazo']?.toString(),
+      expres: json['expres'] == true,
+    );
+  }
 }

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../services/api_client.dart';
+import '../services/datos.dart';
 import 'cita_expres_screen.dart';
 import 'home_screen.dart';
 
@@ -12,6 +14,105 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool esLogin = true;
   bool ocultarPass = true;
+  bool cargando = false;
+
+  final _nombreCtrl = TextEditingController();
+  final _apellidosCtrl = TextEditingController();
+  final _telefonoCtrl = TextEditingController();
+  final _correoCtrl = TextEditingController(text: 'cliente@sima.mx');
+  final _passCtrl = TextEditingController(text: 'sima1234');
+
+  @override
+  void dispose() {
+    _nombreCtrl.dispose();
+    _apellidosCtrl.dispose();
+    _telefonoCtrl.dispose();
+    _correoCtrl.dispose();
+    _passCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _enviar() async {
+    if (_correoCtrl.text.trim().isEmpty || _passCtrl.text.isEmpty) {
+      _mostrarMensaje('Ingresa tu correo y contraseña.');
+      return;
+    }
+    if (!esLogin &&
+        (_nombreCtrl.text.trim().isEmpty ||
+            _apellidosCtrl.text.trim().isEmpty ||
+            _telefonoCtrl.text.trim().isEmpty)) {
+      _mostrarMensaje('Completa nombre, apellidos y teléfono.');
+      return;
+    }
+
+    setState(() => cargando = true);
+    try {
+      final datos = DatosSima();
+      if (esLogin) {
+        await datos.iniciarSesion(_correoCtrl.text, _passCtrl.text);
+      } else {
+        await datos.registrarCuenta(
+          nombre: _nombreCtrl.text,
+          apellidos: _apellidosCtrl.text,
+          telefono: _telefonoCtrl.text,
+          correo: _correoCtrl.text,
+          contrasena: _passCtrl.text,
+        );
+      }
+      if (!mounted) return;
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
+    } catch (e) {
+      _mostrarMensaje(ApiClient.mensajeError(e));
+    } finally {
+      if (mounted) setState(() => cargando = false);
+    }
+  }
+
+  void _mostrarMensaje(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  Future<void> _configurarServidor() async {
+    final actual = await ApiClient().obtenerBaseUrl();
+    final ctrl = TextEditingController(text: actual);
+    if (!mounted) return;
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Servidor API SIMA'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Emulador Android: http://10.0.2.2:3000/api/v1\nCelular físico: http://<IP-DE-TU-PC>:3000/api/v1',
+              style: TextStyle(fontSize: 12, color: Colors.black54),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: ctrl,
+              decoration: const InputDecoration(
+                labelText: 'Base URL',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          ElevatedButton(
+            onPressed: () async {
+              await ApiClient().guardarBaseUrl(ctrl.text);
+              if (ctx.mounted) Navigator.pop(ctx);
+              _mostrarMensaje('Servidor actualizado');
+            },
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,8 +125,14 @@ class _LoginScreenState extends State<LoginScreen> {
           padding: const EdgeInsets.all(24),
           child: Column(
             children: [
-              const SizedBox(height: 12),
-              // Logo SIMA desde assets
+              Align(
+                alignment: Alignment.centerRight,
+                child: IconButton(
+                  tooltip: 'Configurar IP del servidor',
+                  icon: const Icon(Icons.dns_outlined, color: azulSima, size: 20),
+                  onPressed: _configurarServidor,
+                ),
+              ),
               Image.asset(
                 'assets/images/logo.png',
                 height: 62,
@@ -50,8 +157,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: TextStyle(fontSize: 12, color: Colors.grey[600]),
               ),
               const SizedBox(height: 20),
-
-              // Switch Iniciar Sesión / Crear Cuenta
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(color: const Color(0xFFE5E9F2), borderRadius: BorderRadius.circular(10)),
@@ -75,7 +180,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     Expanded(
                       child: GestureDetector(
-                        onTap: () => setState(() => esLogin = false),
+                        onTap: () => setState(() {
+                          esLogin = false;
+                          _correoCtrl.clear();
+                          _passCtrl.clear();
+                        }),
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           decoration: BoxDecoration(
@@ -93,24 +202,25 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-
               if (!esLogin) ...[
-                _campo('Nombre', 'Ej. Juan', Icons.person_outline),
+                _campo('Nombre *', 'Ej. Ana', Icons.person_outline, _nombreCtrl),
                 const SizedBox(height: 12),
-                _campo('Apellido', 'Ej. Pérez Mora', Icons.badge_outlined),
+                _campo('Apellidos *', 'Ej. Ruiz Pérez', Icons.badge_outlined, _apellidosCtrl),
                 const SizedBox(height: 12),
-                _campo('Dirección', 'Calle, número, colonia, código postal', Icons.location_on_outlined),
+                _campo('Teléfono / WhatsApp *', 'Ej. 9981234567', Icons.phone_outlined, _telefonoCtrl,
+                    teclado: TextInputType.phone),
                 const SizedBox(height: 12),
               ],
-              _campo('Correo Electrónico *', esLogin ? 'tu@correo.com' : 'ejemplo@correo.com', Icons.mail_outline),
+              _campo('Correo Electrónico *', 'cliente@sima.mx', Icons.mail_outline, _correoCtrl,
+                  teclado: TextInputType.emailAddress),
               const SizedBox(height: 12),
-
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('Contraseña *', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                   const SizedBox(height: 6),
                   TextField(
+                    controller: _passCtrl,
                     obscureText: ocultarPass,
                     decoration: InputDecoration(
                       hintText: '••••••••••••',
@@ -124,24 +234,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
                     ),
                   ),
-                  if (!esLogin) ...[
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
-                      child: Row(
-                        children: [
-                          Icon(Icons.radio_button_unchecked, size: 16, color: Colors.grey[500]),
-                          const SizedBox(width: 8),
-                          Text('Mínimo 8 caracteres', style: TextStyle(fontSize: 12, color: Colors.grey[700])),
-                        ],
-                      ),
-                    ),
-                  ],
                 ],
               ),
               const SizedBox(height: 24),
-
               SizedBox(
                 width: double.infinity,
                 height: 48,
@@ -151,12 +246,17 @@ class _LoginScreenState extends State<LoginScreen> {
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                  onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen())),
-                  child: Text(esLogin ? 'Iniciar Sesión en SIMA →' : 'Registrarme en SIMA →',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  onPressed: cargando ? null : _enviar,
+                  child: cargando
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        )
+                      : Text(esLogin ? 'Iniciar Sesión en SIMA →' : 'Registrarme en SIMA →',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                 ),
               ),
-
               if (esLogin) ...[
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 14),
@@ -171,26 +271,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       foregroundColor: rojoSima,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
-                        side: const BorderSide(color: rojoSima, width: 1.5)),
+                        side: const BorderSide(color: rojoSima, width: 1.5),
+                      ),
                     ),
                     onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CitaExpresScreen())),
                     child: const Text('Agendar cita Exprés →', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                   ),
-                ),
-              ] else ...[
-                const SizedBox(height: 18),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text('¿Ya tienes una cuenta?  ', style: TextStyle(fontSize: 13, color: Colors.grey[700])),
-                    GestureDetector(
-                      onTap: () => setState(() => esLogin = true),
-                      child: const Text(
-                        'iniciar sesión',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: azulSima),
-                      ),
-                    ),
-                  ],
                 ),
               ],
             ],
@@ -200,13 +286,16 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _campo(String label, String hint, IconData icon) {
+  Widget _campo(String label, String hint, IconData icon, TextEditingController ctrl,
+      {TextInputType teclado = TextInputType.text}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
         const SizedBox(height: 6),
         TextField(
+          controller: ctrl,
+          keyboardType: teclado,
           decoration: InputDecoration(
             hintText: hint,
             prefixIcon: Icon(icon, size: 20),

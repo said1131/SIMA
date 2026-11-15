@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
-import '../models/vehiculo_model.dart';
-import '../services/datos.dart';
 import 'dart:typed_data';
+import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import '../models/vehiculo_model.dart';
+import '../services/api_client.dart';
+import '../services/datos.dart';
 
 class RegistrarVehiculoScreen extends StatefulWidget {
   final Vehiculo? vehiculoEditar;
@@ -21,8 +22,9 @@ class _RegistrarVehiculoScreenState extends State<RegistrarVehiculoScreen> {
   final _placasCtrl = TextEditingController();
   final _kmCtrl = TextEditingController();
   Uint8List? _fotoBytes;
+  bool _guardando = false;
 
-  final List<String> _marcas = ['Toyota', 'Chevrolet', 'Nissan', 'Volkswagen', 'Honda', 'Ford', 'Kia'];
+  final List<String> _marcas = ['Toyota', 'Chevrolet', 'Nissan', 'Volkswagen', 'Honda', 'Ford', 'Kia', 'Mazda', 'Hyundai'];
 
   @override
   void initState() {
@@ -33,7 +35,7 @@ class _RegistrarVehiculoScreenState extends State<RegistrarVehiculoScreen> {
       _modeloCtrl.text = v.modelo;
       _anioCtrl.text = v.anio;
       _placasCtrl.text = v.placas;
-      _kmCtrl.text = v.kilometraje;
+      _kmCtrl.text = v.kilometraje == 'Sin registro' ? '' : v.kilometraje;
       _fotoBytes = v.fotoBytes;
     }
   }
@@ -43,9 +45,52 @@ class _RegistrarVehiculoScreenState extends State<RegistrarVehiculoScreen> {
     final XFile? archivo = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
     if (archivo != null) {
       final bytes = await archivo.readAsBytes();
-      setState(() {
-        _fotoBytes = bytes;
-      });
+      setState(() => _fotoBytes = bytes);
+    }
+  }
+
+  Future<void> _guardar() async {
+    final modelo = _modeloCtrl.text.trim();
+    final placas = _placasCtrl.text.trim();
+    final anio = int.tryParse(_anioCtrl.text.trim()) ?? 2024;
+
+    if (modelo.isEmpty || placas.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Modelo y placas son obligatorios.')),
+      );
+      return;
+    }
+
+    setState(() => _guardando = true);
+    try {
+      final datos = DatosSima();
+      if (widget.vehiculoEditar != null) {
+        await datos.editarVehiculo(
+          id: widget.vehiculoEditar!.id,
+          marca: _marca,
+          modelo: modelo,
+          anio: anio,
+          placas: placas,
+          kilometraje: _kmCtrl.text,
+          fotoBytes: _fotoBytes,
+        );
+      } else {
+        await datos.crearVehiculo(
+          marca: _marca,
+          modelo: modelo,
+          anio: anio,
+          placas: placas,
+          kilometraje: _kmCtrl.text,
+          fotoBytes: _fotoBytes,
+        );
+      }
+      if (!mounted) return;
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ApiClient.mensajeError(e))));
+    } finally {
+      if (mounted) setState(() => _guardando = false);
     }
   }
 
@@ -75,30 +120,18 @@ class _RegistrarVehiculoScreenState extends State<RegistrarVehiculoScreen> {
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(colors: [Color(0xFF102566), Color(0xFF2848A8)]),
                   borderRadius: BorderRadius.circular(14),
-                  image: _fotoBytes != null
-                    ? DecorationImage(image: MemoryImage(_fotoBytes!), fit: BoxFit.cover)
-                    :null,
+                  image: _fotoBytes != null ? DecorationImage(image: MemoryImage(_fotoBytes!), fit: BoxFit.cover) : null,
                 ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    color: _fotoBytes != null ? Colors.black.withValues(alpha: 0.25) : Colors.transparent,
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        _fotoBytes != null ? Icons.camera_alt : Icons.add_a_photo_outlined,
-                        color: Colors.white,
-                        size: 38,
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        _fotoBytes != null ? 'Cambiar foto del vehículo' : 'Subir foto del vehículo (opcional)',
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-                      ),
-                    ],
-                  ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(_fotoBytes != null ? Icons.camera_alt : Icons.add_a_photo_outlined, color: Colors.white, size: 38),
+                    const SizedBox(height: 6),
+                    Text(
+                      _fotoBytes != null ? 'Cambiar foto del vehículo' : 'Subir foto del vehículo (opcional)',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -116,20 +149,17 @@ class _RegistrarVehiculoScreenState extends State<RegistrarVehiculoScreen> {
               onChanged: (v) => setState(() => _marca = v!),
             ),
             const SizedBox(height: 12),
-            _campo('Modelo', 'Hilux', _modeloCtrl),
+            _campo('Modelo *', 'Hilux', _modeloCtrl),
             const SizedBox(height: 12),
             Row(
               children: [
-                Expanded(child: _campo('Año', '2021', _anioCtrl)),
+                Expanded(child: _campo('Año *', '2021', _anioCtrl, teclado: TextInputType.number)),
                 const SizedBox(width: 12),
-                Expanded(child: _campo('Placas', 'ABC-892', _placasCtrl)),
+                Expanded(child: _campo('Placas *', 'ABC-892', _placasCtrl)),
               ],
             ),
             const SizedBox(height: 12),
             _campo('Kilometraje actual', '45,210 km', _kmCtrl),
-            const SizedBox(height: 12),
-            Text('Podrás editar estos datos después desde Mi Garage.',
-                style: TextStyle(fontSize: 11, color: Colors.grey[600])),
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
@@ -140,38 +170,10 @@ class _RegistrarVehiculoScreenState extends State<RegistrarVehiculoScreen> {
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
-                onPressed: () {
-                  final nuevo = Vehiculo(
-                    id: esEdicion ? widget.vehiculoEditar!.id : DateTime.now().toString(),
-                    marca: _marca,
-                    modelo: _modeloCtrl.text.isEmpty ? 'Modelo' : _modeloCtrl.text,
-                    anio: _anioCtrl.text.isEmpty ? '2024' : _anioCtrl.text,
-                    placas: _placasCtrl.text.isEmpty ? 'SIN-000' : _placasCtrl.text,
-                    kilometraje: _kmCtrl.text.isEmpty ? '0 km' : _kmCtrl.text,
-                    ultimoServicio: esEdicion ? widget.vehiculoEditar!.ultimoServicio : 'Sin registro',
-                    fotoBytes: _fotoBytes,
-                  );
-                  if (esEdicion && widget.indexEditar != null) {
-                    DatosSima().actualizarVehiculo(widget.indexEditar!, nuevo);
-                  } else {
-                    DatosSima().agregarVehiculo(nuevo);
-                  }
-                  Navigator.pop(context);
-                },
-                child: const Text('Guardar vehículo', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-              ),
-            ),
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancelar', style: TextStyle(color: azulSima, fontWeight: FontWeight.bold)),
+                onPressed: _guardando ? null : _guardar,
+                child: _guardando
+                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Text('Guardar vehículo', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
               ),
             ),
           ],
@@ -180,7 +182,7 @@ class _RegistrarVehiculoScreenState extends State<RegistrarVehiculoScreen> {
     );
   }
 
-  Widget _campo(String label, String hint, TextEditingController ctrl) {
+  Widget _campo(String label, String hint, TextEditingController ctrl, {TextInputType teclado = TextInputType.text}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -188,6 +190,7 @@ class _RegistrarVehiculoScreenState extends State<RegistrarVehiculoScreen> {
         const SizedBox(height: 6),
         TextField(
           controller: ctrl,
+          keyboardType: teclado,
           decoration: InputDecoration(
             hintText: hint,
             filled: true,

@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Layout } from '../components/Layout';
 import type { ShellProps } from '../components/Layout';
 import { CLIENTES, fmtFecha, fmtMoney } from '../data';
-import type { Cita, Orden, Page, Servicio } from '../types';
+import type { Cita, Cliente, Orden, Page, Servicio } from '../types';
 
 interface Props {
   shell: ShellProps;
@@ -10,36 +10,66 @@ interface Props {
   citas: Cita[];
   ordenes: Orden[];
   servicios: Servicio[];
+  clientes?: Cliente[];
   onCrear: (o: Orden) => void;
   go: (p: Page) => void;
 }
 
-export default function NuevaOrden({ shell, citaId, citas, ordenes, servicios, onCrear, go }: Props) {
+export default function NuevaOrden({ shell, citaId, citas, ordenes, servicios, clientes, onCrear, go }: Props) {
+  const listaClientes = clientes && clientes.length > 0 ? clientes : CLIENTES;
   const cita = citas.find((c) => c.id === citaId);
   const activos = servicios.filter((s) => s.activo);
 
-  const clienteInicial = CLIENTES.find((c) => c.nombre === cita?.cliente) ?? CLIENTES[0];
+  const clienteInicial =
+    listaClientes.find((c) => (cita?.clienteId != null && c.id === String(cita.clienteId)) || c.nombre === cita?.cliente) ??
+    listaClientes[0];
   const [clienteId, setClienteId] = useState(clienteInicial.id);
-  const cliente = CLIENTES.find((c) => c.id === clienteId)!;
-  const [placas, setPlacas] = useState(cita?.placas ?? cliente.vehiculos[0].placas);
+  const cliente = listaClientes.find((c) => c.id === clienteId) ?? listaClientes[0];
+  const [placas, setPlacas] = useState(cita?.placas ?? cliente.vehiculos[0]?.placas ?? '');
   const [servicioId, setServicioId] = useState(
-    activos.find((s) => cita && s.nombre.toLowerCase().includes(cita.servicio.toLowerCase()))?.id ?? activos[0]?.id ?? ''
+    (cita?.servicioId != null ? activos.find((s) => s.id === String(cita.servicioId))?.id : undefined) ??
+      activos.find((s) => cita && s.nombre.toLowerCase().includes(cita.servicio.toLowerCase()))?.id ??
+      activos[0]?.id ??
+      ''
   );
   const [km, setKm] = useState(cita ? '45210' : '');
   const [notas, setNotas] = useState(cita ? 'El cliente reporta ruido metálico al frenar y vibración en el volante.' : '');
   const [intento, setIntento] = useState(false);
 
-  const vehiculo = cliente.vehiculos.find((v) => v.placas === placas) ?? cliente.vehiculos[0];
+  useEffect(() => {
+    if (!listaClientes.some((c) => c.id === clienteId)) {
+      const next =
+        listaClientes.find((c) => (cita?.clienteId != null && c.id === String(cita.clienteId)) || c.nombre === cita?.cliente) ??
+        listaClientes[0];
+      setClienteId(next.id);
+      setPlacas(cita?.placas ?? next.vehiculos[0]?.placas ?? '');
+    }
+  }, [listaClientes, clienteId, cita]);
+
+  useEffect(() => {
+    if (!servicioId && activos.length > 0) {
+      setServicioId(
+        (cita?.servicioId != null ? activos.find((s) => s.id === String(cita.servicioId))?.id : undefined) ??
+          activos.find((s) => cita && s.nombre.toLowerCase().includes(cita.servicio.toLowerCase()))?.id ??
+          activos[0].id
+      );
+    }
+  }, [activos, servicioId, cita]);
+
+  const vehiculo = cliente.vehiculos.find((v) => v.placas === placas) ?? cliente.vehiculos[0] ?? { descripcion: '', placas: '' };
   const servicio = activos.find((s) => s.id === servicioId);
   const folio = useMemo(() => {
-    const max = ordenes.reduce((m, o) => Math.max(m, Number(o.id.replace('OT-', ''))), 1000);
+    const max = ordenes.reduce((m, o) => {
+      const n = Number(o.id.replace('OT-', ''));
+      return Number.isFinite(n) ? Math.max(m, n) : m;
+    }, 1000);
     return `OT-${max + 1}`;
   }, [ordenes]);
 
   const cambiarCliente = (id: string) => {
     setClienteId(id);
-    const c = CLIENTES.find((x) => x.id === id)!;
-    setPlacas(c.vehiculos[0].placas);
+    const c = listaClientes.find((x) => x.id === id) ?? listaClientes[0];
+    setPlacas(c.vehiculos[0]?.placas ?? '');
   };
 
   const kmValido = km.trim() !== '' && Number(km) >= 0;
@@ -62,6 +92,10 @@ export default function NuevaOrden({ shell, citaId, citas, ordenes, servicios, o
       telefono: cliente.telefono,
       kilometraje: Number(km),
       notas,
+      clienteId: Number(cliente.id) || cita?.clienteId,
+      vehiculoId: vehiculo.id ?? cita?.vehiculoId,
+      servicioId: Number(servicio.id) || cita?.servicioId,
+      citaId: cita ? Number(cita.id) : undefined,
     });
   };
 
@@ -90,7 +124,7 @@ export default function NuevaOrden({ shell, citaId, citas, ordenes, servicios, o
               <div className="field">
                 <label>Cliente</label>
                 <select value={clienteId} onChange={(e) => cambiarCliente(e.target.value)}>
-                  {CLIENTES.map((c) => <option key={c.id} value={c.id}>{c.nombre}{c.sinCuenta ? ' (sin cuenta)' : ''}</option>)}
+                  {listaClientes.map((c) => <option key={c.id} value={c.id}>{c.nombre}{c.sinCuenta ? ' (sin cuenta)' : ''}</option>)}
                 </select>
               </div>
               <div className="field">

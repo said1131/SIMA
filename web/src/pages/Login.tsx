@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Logo } from '../components/Icons';
+import { loginStaff } from '../api';
 
 interface Props {
   onLogin: (name: string) => void;
@@ -12,15 +13,21 @@ const DEMO_PASS = 'sima1234';
 export default function Login({ onLogin }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (email.trim().toLowerCase() === DEMO_EMAIL && password === DEMO_PASS) {
-      setError(false);
-      onLogin('Ing. Carlos Méndez');
-    } else {
-      setError(true);
+    if (loading) return;
+    setLoading(true);
+    try {
+      const name = await loginStaff(email, password);
+      setError('');
+      onLogin(name);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Correo o contraseña incorrectos');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -48,8 +55,10 @@ export default function Login({ onLogin }: Props) {
             <label htmlFor="pass">Contraseña</label>
             <input id="pass" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
-          {error && <div className="error-box">Correo o contraseña incorrectos</div>}
-          <button className="btn red block" type="submit">Iniciar sesión en SIMA →</button>
+          {error && <div className="error-box">{error}</div>}
+          <button className="btn red block" type="submit" disabled={loading}>
+            {loading ? 'Iniciando sesión...' : 'Iniciar sesión en SIMA →'}
+          </button>
           <p className="hint">Demo: {DEMO_EMAIL} / {DEMO_PASS}</p>
         </form>
       </section>

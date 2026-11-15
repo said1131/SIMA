@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../services/datos.dart';
-import 'registrar_vehiculo_screen.dart';
 import 'agendar_cita_screen.dart';
+import 'login_screen.dart';
+import 'notificaciones_screen.dart';
+import 'registrar_vehiculo_screen.dart';
 
 class GarageScreen extends StatefulWidget {
   final VoidCallback irAServicios;
@@ -32,8 +34,11 @@ class _GarageScreenState extends State<GarageScreen> {
   Widget build(BuildContext context) {
     const azulSima = Color(0xFF102566);
     const rojoSima = Color(0xFFD92323);
-    final vehiculoActivo = datos.vehiculos[datos.vehiculoActivoIndex];
-    final proximaCita = datos.citas.isNotEmpty ? datos.citas.first : null;
+    final tieneVehiculos = datos.vehiculos.isNotEmpty;
+    final vehiculoActivo = tieneVehiculos ? datos.vehiculos[datos.vehiculoActivoIndex] : null;
+    final citasActivas = datos.citas.where((c) => c.estado == 'Solicitada' || c.estado == 'Confirmada').toList();
+    final proximaCita = citasActivas.isNotEmpty ? citasActivas.first : null;
+    final nombreUsuario = datos.usuario?['nombre']?.toString() ?? 'Cliente';
 
     return Scaffold(
       appBar: AppBar(
@@ -49,296 +54,329 @@ class _GarageScreenState extends State<GarageScreen> {
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none, color: azulSima),
-            onPressed: () {},
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications_none, color: azulSima),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const NotificacionesScreen()),
+                ),
+              ),
+              if (datos.notificacionesNoLeidas > 0)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(color: rojoSima, shape: BoxShape.circle),
+                    child: Text(
+                      '${datos.notificacionesNoLeidas}',
+                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+            ],
           ),
-          const Padding(
-            padding: EdgeInsets.only(right: 14),
-            child: CircleAvatar(radius: 14, backgroundColor: Color(0xFFD0D7E8)),
-          )
+          IconButton(
+            tooltip: 'Cerrar sesión',
+            icon: const Icon(Icons.logout, color: azulSima, size: 20),
+            onPressed: () async {
+              await datos.cerrarSesion();
+              if (!context.mounted) return;
+              Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+            },
+          ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Tarjeta Próxima Cita
-            if (proximaCita != null)
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE8ECF7),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(color: azulSima, borderRadius: BorderRadius.circular(6)),
-                          child: const Text('PRÓXIMA CITA',
-                              style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                        ),
-                        const SizedBox(width: 8),
-                        Text('${proximaCita.estado} por el taller',
-                            style: TextStyle(fontSize: 11, color: Colors.grey[700])),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text('${proximaCita.servicio} · ${proximaCita.fecha},${proximaCita.hora}',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: azulSima)),
-                    Text('${proximaCita.vehiculo} (${proximaCita.placas}) · Taller SIMA',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[700])),
-                    const SizedBox(height: 10),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: azulSima,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        ),
-                        onPressed: widget.irAServicios,
-                        child: const Text('Ver mis citas →', style: TextStyle(fontSize: 12)),
-                      ),
-                    )
-                  ],
-                ),
-              ),
-            const SizedBox(height: 18),
-
-            // Chips Unidades Registradas
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('UNIDADES REGISTRADAS',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
-                Text('${datos.vehiculos.length} vehículos',
-                    style: const TextStyle(fontSize: 11, color: Colors.grey)),
-              ],
-            ),
-            const SizedBox(height: 8),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: List.generate(datos.vehiculos.length, (index) {
-                  final v = datos.vehiculos[index];
-                  final activo = index == datos.vehiculoActivoIndex;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      label: Text('${v.marca} ${v.modelo}${activo ? " (Activo)" : ""}'),
-                      selected: activo,
-                      selectedColor: azulSima,
-                      labelStyle: TextStyle(
-                        color: activo ? Colors.white : azulSima,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                      onSelected: (_) => datos.seleccionarVehiculoActivo(index),
-                    ),
-                  );
-                }),
-              ),
-            ),
-            const SizedBox(height: 14),
-
-            // Tarjeta Vehículo Activo
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(color: const Color(0xFFE8ECF7), borderRadius: BorderRadius.circular(6)),
-                    child: Text(vehiculoActivo.placas,
-                        style: const TextStyle(color: azulSima, fontWeight: FontWeight.bold, fontSize: 11)),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(vehiculoActivo.nombreCompleto,
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1A1F36))),
-                  Text('Marca ${vehiculoActivo.marca} · Modelo ${vehiculoActivo.modelo} · Año ${vehiculoActivo.anio}',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-                  const SizedBox(height: 12),
-Container(
-                    height: 140,
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [Color(0xFF102566), Color(0xFF2848A8)]),
-                      borderRadius: BorderRadius.circular(12),
-                      image: vehiculoActivo.fotoBytes != null
-                          ? DecorationImage(
-                              image: MemoryImage(vehiculoActivo.fotoBytes!),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
-                    ),
-                    child: Stack(
-                      children: [
-                        if (vehiculoActivo.fotoBytes == null)
-                          const Center(child: Icon(Icons.directions_car_filled, color: Colors.white54, size: 76)),
-                        Align(
-                          alignment: Alignment.bottomLeft,
-                          child: _badgeInfo(vehiculoActivo.kilometraje),
-                        ),
-                        Align(
-                          alignment: Alignment.bottomRight,
-                          child: _badgeInfo('Último servicio: ${vehiculoActivo.ultimoServicio}'),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
+      body: RefreshIndicator(
+        onRefresh: datos.cargarTodo,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Hola, $nombreUsuario', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: azulSima)),
+              const SizedBox(height: 10),
+              if (proximaCita != null)
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(color: const Color(0xFFE8ECF7), borderRadius: BorderRadius.circular(14)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(backgroundColor: azulSima, foregroundColor: Colors.white),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => AgendarCitaScreen(servicioInicial: datos.catalogo.first),
-                              ),
-                            );
-                          },
-                          child: const Text('Agendar cita', style: TextStyle(fontWeight: FontWeight.bold)),
-                        ),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(color: azulSima, borderRadius: BorderRadius.circular(6)),
+                            child: const Text('PRÓXIMA CITA',
+                                style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(proximaCita.estado, style: TextStyle(fontSize: 11, color: Colors.grey[700])),
+                        ],
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
+                      const SizedBox(height: 8),
+                      Text('${proximaCita.servicio} · ${proximaCita.fecha}, ${proximaCita.hora}',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: azulSima)),
+                      Text('${proximaCita.vehiculo} (${proximaCita.placas}) · Taller SIMA',
+                          style: TextStyle(fontSize: 12, color: Colors.grey[700])),
+                      const SizedBox(height: 10),
+                      Align(
+                        alignment: Alignment.centerRight,
                         child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(backgroundColor: azulSima, foregroundColor: Colors.white),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => RegistrarVehiculoScreen(
-                                  vehiculoEditar: vehiculoActivo,
-                                  indexEditar: datos.vehiculoActivoIndex,
-                                ),
-                              ),
-                            );
-                          },
-                          child: const Text('Editar vehículo', style: TextStyle(fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: azulSima,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          ),
+                          onPressed: widget.irAServicios,
+                          child: const Text('Ver mis citas →', style: TextStyle(fontSize: 12)),
                         ),
                       ),
                     ],
                   ),
+                ),
+              const SizedBox(height: 18),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('UNIDADES REGISTRADAS',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
+                  Text('${datos.vehiculos.length} vehículos', style: const TextStyle(fontSize: 11, color: Colors.grey)),
                 ],
               ),
-            ),
-            const SizedBox(height: 20),
-
-            // Flota en Garage
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Flota en Garage', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    Text('Tus vehículos registrados', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                  ],
+              const SizedBox(height: 8),
+              if (!tieneVehiculos)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.directions_car_outlined, size: 48, color: azulSima),
+                      const SizedBox(height: 8),
+                      const Text('Aún no tienes vehículos registrados',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      const SizedBox(height: 14),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(backgroundColor: rojoSima, foregroundColor: Colors.white),
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const RegistrarVehiculoScreen()),
+                        ),
+                        icon: const Icon(Icons.add),
+                        label: const Text('Registrar vehículo'),
+                      ),
+                    ],
+                  ),
+                )
+              else ...[
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: List.generate(datos.vehiculos.length, (index) {
+                      final v = datos.vehiculos[index];
+                      final activo = index == datos.vehiculoActivoIndex;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text('${v.marca} ${v.modelo}${activo ? " (Activo)" : ""}'),
+                          selected: activo,
+                          selectedColor: azulSima,
+                          labelStyle: TextStyle(
+                            color: activo ? Colors.white : azulSima,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                          onSelected: (_) => datos.seleccionarVehiculoActivo(index),
+                        ),
+                      );
+                    }),
+                  ),
                 ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: azulSima, foregroundColor: Colors.white),
-                  onPressed: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const RegistrarVehiculoScreen()));
-                  },
-                  child: const Text('+ Registrar'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ...List.generate(datos.vehiculos.length, (i) {
-              final v = datos.vehiculos[i];
-              final esActivo = i == datos.vehiculoActivoIndex;
-              return Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(color: azulSima, borderRadius: BorderRadius.circular(10)),
-                      child: const Icon(Icons.directions_car, color: Colors.white),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(color: const Color(0xFFE8ECF7), borderRadius: BorderRadius.circular(6)),
+                        child: Text(vehiculoActivo!.placas,
+                            style: const TextStyle(color: azulSima, fontWeight: FontWeight.bold, fontSize: 11)),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(vehiculoActivo.nombreCompleto,
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1A1F36))),
+                      Text('Marca ${vehiculoActivo.marca} · Modelo ${vehiculoActivo.modelo} · Año ${vehiculoActivo.anio}',
+                          style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                      const SizedBox(height: 12),
+                      Container(
+                        height: 140,
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(colors: [Color(0xFF102566), Color(0xFF2848A8)]),
+                          borderRadius: BorderRadius.circular(12),
+                          image: vehiculoActivo.fotoBytes != null
+                              ? DecorationImage(image: MemoryImage(vehiculoActivo.fotoBytes!), fit: BoxFit.cover)
+                              : null,
+                        ),
+                        child: Stack(
+                          children: [
+                            if (vehiculoActivo.fotoBytes == null)
+                              const Center(child: Icon(Icons.directions_car_filled, color: Colors.white54, size: 76)),
+                            Align(alignment: Alignment.bottomLeft, child: _badgeInfo(vehiculoActivo.kilometraje)),
+                            Align(alignment: Alignment.bottomRight, child: _badgeInfo('Placas: ${vehiculoActivo.placas}')),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
                         children: [
-                          Text(v.nombreCompleto, style: const TextStyle(fontWeight: FontWeight.bold)),
-                          Text('${v.placas} ·${v.kilometraje}',
-                              style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              SizedBox(
-                                height: 28,
-                                child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: rojoSima,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                                  ),
-                                  onPressed: () {
-                                    datos.seleccionarVehiculoActivo(i);
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => AgendarCitaScreen(servicioInicial: datos.catalogo.first),
+                          Expanded(
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(backgroundColor: azulSima, foregroundColor: Colors.white),
+                              onPressed: datos.catalogo.isEmpty
+                                  ? widget.irAServicios
+                                  : () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => AgendarCitaScreen(servicioInicial: datos.catalogo.first),
+                                        ),
                                       ),
-                                    );
-                                  },
-                                  child: const Text('Agendar', style: TextStyle(fontSize: 11)),
+                              child: const Text('Agendar cita', style: TextStyle(fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(backgroundColor: azulSima, foregroundColor: Colors.white),
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => RegistrarVehiculoScreen(
+                                    vehiculoEditar: vehiculoActivo,
+                                    indexEditar: datos.vehiculoActivoIndex,
+                                  ),
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              SizedBox(
-                                height: 28,
-                                child: OutlinedButton(
-                                  style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12)),
-                                  onPressed: () {
-                                    Navigator.push(
+                              child: const Text('Editar vehículo', style: TextStyle(fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Flota en Garage', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text('Tus vehículos registrados', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    ],
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: azulSima, foregroundColor: Colors.white),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const RegistrarVehiculoScreen()),
+                    ),
+                    child: const Text('+ Registrar'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ...List.generate(datos.vehiculos.length, (i) {
+                final v = datos.vehiculos[i];
+                final esActivo = i == datos.vehiculoActivoIndex;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(color: azulSima, borderRadius: BorderRadius.circular(10)),
+                        child: const Icon(Icons.directions_car, color: Colors.white),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(v.nombreCompleto, style: const TextStyle(fontWeight: FontWeight.bold)),
+                            Text('${v.placas} · ${v.kilometraje}',
+                                style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                SizedBox(
+                                  height: 28,
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: rojoSima,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    ),
+                                    onPressed: datos.catalogo.isEmpty
+                                        ? widget.irAServicios
+                                        : () {
+                                            datos.seleccionarVehiculoActivo(i);
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) => AgendarCitaScreen(servicioInicial: datos.catalogo.first),
+                                              ),
+                                            );
+                                          },
+                                    child: const Text('Agendar', style: TextStyle(fontSize: 11)),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                SizedBox(
+                                  height: 28,
+                                  child: OutlinedButton(
+                                    style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12)),
+                                    onPressed: () => Navigator.push(
                                       context,
                                       MaterialPageRoute(
                                         builder: (_) => RegistrarVehiculoScreen(vehiculoEditar: v, indexEditar: i),
                                       ),
-                                    );
-                                  },
-                                  child: const Text('Editar', style: TextStyle(fontSize: 11)),
+                                    ),
+                                    child: const Text('Editar', style: TextStyle(fontSize: 11)),
+                                  ),
                                 ),
-                              ),
-                            ],
-                          )
-                        ],
-                      ),
-                    ),
-                    if (esActivo)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFD4EDDA),
-                          borderRadius: BorderRadius.circular(8),
+                              ],
+                            ),
+                          ],
                         ),
-                        child: const Text('Activo',
-                            style: TextStyle(color: Color(0xFF155724), fontSize: 11, fontWeight: FontWeight.bold)),
                       ),
-                  ],
-                ),
-              );
-            }),
-          ],
+                      if (esActivo)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(color: const Color(0xFFD4EDDA), borderRadius: BorderRadius.circular(8)),
+                          child: const Text('Activo',
+                              style: TextStyle(color: Color(0xFF155724), fontSize: 11, fontWeight: FontWeight.bold)),
+                        ),
+                    ],
+                  ),
+                );
+              }),
+            ],
+          ),
         ),
       ),
     );

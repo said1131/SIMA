@@ -11,6 +11,9 @@ export interface Cita {
   estado: CitaEstado;
   expres?: boolean;
   telefono?: string;
+  clienteId?: number;
+  vehiculoId?: number;
+  servicioId?: number;
 }
 
 export type OrdenEstado =
@@ -36,6 +39,7 @@ export type Autorizacion = 'Pendiente' | 'Autorizada' | 'Rechazada';
 
 export interface Orden {
   id: string; // OT-1082
+  dbId?: number;
   cliente: string;
   vehiculo: string;
   placas: string;
@@ -49,6 +53,10 @@ export interface Orden {
   telefono?: string;
   kilometraje?: number;
   notas?: string;
+  clienteId?: number;
+  vehiculoId?: number;
+  servicioId?: number;
+  citaId?: number;
 }
 
 export interface Cliente {
@@ -56,7 +64,7 @@ export interface Cliente {
   nombre: string;
   sinCuenta?: boolean;
   telefono?: string;
-  vehiculos: { descripcion: string; placas: string }[];
+  vehiculos: { id?: number; descripcion: string; placas: string }[];
 }
 
 export type Categoria = 'Preventivo' | 'Frenos' | 'Eléctrico' | 'Suspensión' | 'Motor';
@@ -92,5 +100,7 @@ export interface Notificacion {
   detalle: string;
   tiempo: string;
   leida: boolean;
+  refTipo?: string;
+  refId?: number;
   accion: { label: string; destino: Page; primaria: boolean };
 }
