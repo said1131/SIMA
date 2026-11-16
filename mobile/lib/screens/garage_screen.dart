@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../services/datos.dart';
 import 'agendar_cita_screen.dart';
 import 'login_screen.dart';
-import 'notificaciones_screen.dart';
 import 'registrar_vehiculo_screen.dart';
+import '../widgets/campana_notificaciones.dart';
 
 class GarageScreen extends StatefulWidget {
   final VoidCallback irAServicios;
@@ -54,31 +54,7 @@ class _GarageScreenState extends State<GarageScreen> {
           ],
         ),
         actions: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.notifications_none, color: azulSima),
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const NotificacionesScreen()),
-                ),
-              ),
-              if (datos.notificacionesNoLeidas > 0)
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(color: rojoSima, shape: BoxShape.circle),
-                    child: Text(
-                      '${datos.notificacionesNoLeidas}',
-                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-            ],
-          ),
+          const CampanaNotificaciones(),
           IconButton(
             tooltip: 'Cerrar sesión',
             icon: const Icon(Icons.logout, color: azulSima, size: 20),
