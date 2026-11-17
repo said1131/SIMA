@@ -46,7 +46,7 @@ services:
         set -e
         for f in /init/*.sql; do
           echo ">> Ejecutando $$f"
-          /opt/mssql-tools18/bin/sqlcmd -C -S db -U sa -P "$$MSSQL_SA_PASSWORD" \
+          /opt/mssql-tools18/bin/sqlcmd -I -C -S db -U sa -P "$$MSSQL_SA_PASSWORD" \
             -f 65001 -b -v API_PASSWORD="$$API_DB_PASSWORD" -i "$$f"
         done
         echo "✔ Base de datos SIMADB lista."

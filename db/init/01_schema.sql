@@ -1,3 +1,5 @@
+SET QUOTED_IDENTIFIER ON;
+GO
 /* =====================================================================
    01_schema.sql · Esquema COMPLETO y actualizado de SIMADB (instalación limpia)
 
