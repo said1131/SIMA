@@ -1,12 +1,5 @@
-import type { Request, RequestHandler, Response } from 'express';
+import type { Response } from 'express';
 import { z } from 'zod';
-
-/** Envuelve handlers async para que los errores lleguen al errorHandler. */
-export const ah =
-  (fn: (req: Request, res: Response) => Promise<unknown>): RequestHandler =>
-  (req, res, next) => {
-    fn(req, res).catch(next);
-  };
 
 export const ok = (res: Response, data: unknown, status = 200) => res.status(status).json({ data });
 

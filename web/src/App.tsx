@@ -15,7 +15,6 @@ import {
   fetchClientes,
   fetchMe,
   fetchNotificaciones,
-  fetchOrdenDetalle,
   fetchOrdenes,
   fetchServicios,
   getSavedUser,
@@ -36,6 +35,8 @@ import OrdenDetalle from './pages/OrdenDetalle';
 import Catalogo from './pages/Catalogo';
 import Notificaciones from './pages/Notificaciones';
 
+type ToastTone = 'success' | 'error';
+
 export default function App() {
   const [user, setUser] = useState<string | null>(() => (getToken() ? getSavedUser() || 'Personal SIMA' : null));
   const [page, setPage] = useState<Page>({ name: 'dashboard' });
@@ -44,11 +45,12 @@ export default function App() {
   const [servicios, setServicios] = useState<Servicio[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [notifs, setNotifs] = useState<Notificacion[]>([]);
-  const [toast, setToast] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState<{ message: string; tone: ToastTone } | null>(null);
   const timer = useRef<number | undefined>(undefined);
 
-  const showToast = useCallback((msg: string) => {
-    setToast(msg);
+  const showToast = useCallback((message: string, tone: ToastTone = 'success') => {
+    setToast({ message, tone });
     window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => setToast(null), 3200);
   }, []);
@@ -61,6 +63,7 @@ export default function App() {
 
   const cargarTodo = useCallback(async () => {
     if (!getToken()) return;
+    setLoading(true);
     try {
       const [citasRes, ordenesRes, serviciosRes, clientesRes] = await Promise.all([
         fetchCitas(),
@@ -78,8 +81,10 @@ export default function App() {
       if (!getToken()) {
         setUser(null);
       } else {
-        showToast(err instanceof Error ? err.message : 'Error al sincronizar con el servidor');
+        showToast(err instanceof Error ? err.message : 'Error al sincronizar con el servidor', 'error');
       }
+    } finally {
+      setLoading(false);
     }
   }, [showToast]);
 
@@ -87,12 +92,15 @@ export default function App() {
     if (!user) return;
     fetchMe()
       .then((nombre) => setUser(nombre))
-      .catch(() => {
-        clearSession();
-        setUser(null);
+      .catch((err) => {
+        if (!getToken()) {
+          setUser(null);
+          return;
+        }
+        showToast(err instanceof Error ? err.message : 'No se pudo validar la sesión', 'error');
       });
     cargarTodo();
-  }, [user, cargarTodo]);
+  }, [user, cargarTodo, showToast]);
 
   if (!user) {
     return (
@@ -107,6 +115,7 @@ export default function App() {
 
   const shell: ShellProps = {
     unread: notifs.filter((n) => !n.leida).length,
+    loading,
     toast,
     userName: user,
     onNavigate: go,
@@ -123,7 +132,7 @@ export default function App() {
       setCitas((cs) => cs.map((c) => (c.id === id ? actualizada : c)));
       showToast('Cita confirmada. Se avisó al cliente');
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'No se pudo confirmar la cita');
+      showToast(err instanceof Error ? err.message : 'No se pudo confirmar la cita', 'error');
     }
   };
 
@@ -133,7 +142,7 @@ export default function App() {
       setCitas((cs) => cs.map((c) => (c.id === id ? actualizada : c)));
       showToast('Cita rechazada. Se avisó al cliente');
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'No se pudo rechazar la cita');
+      showToast(err instanceof Error ? err.message : 'No se pudo rechazar la cita', 'error');
     }
   };
 
@@ -148,7 +157,7 @@ export default function App() {
       const servicioId = o.servicioId ?? (servicioMatch ? Number(servicioMatch.id) : undefined);
 
       if (!clienteId || !vehiculoId || !servicioId) {
-        showToast('Selecciona un cliente, vehículo y servicio registrados en la base de datos.');
+        showToast('Selecciona un cliente, vehículo y servicio registrados en la base de datos.', 'error');
         return;
       }
 
@@ -161,12 +170,11 @@ export default function App() {
         citaId: o.citaId,
       });
 
-      const detalle = creada.dbId != null ? await fetchOrdenDetalle(creada.dbId).catch(() => creada) : creada;
-      setOrdenes((os) => [detalle, ...os]);
-      showToast(`Orden ${detalle.id} creada`);
-      go({ name: 'orden', id: detalle.id });
+      setOrdenes((os) => [creada, ...os]);
+      showToast(`Orden ${creada.id} creada`);
+      go({ name: 'orden', id: creada.id });
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'No se pudo crear la orden');
+      showToast(err instanceof Error ? err.message : 'No se pudo crear la orden', 'error');
     }
   };
 
@@ -209,11 +217,11 @@ export default function App() {
         updated = await cambiarEstadoOrdenApi(dbId, patch.estado);
       }
 
-      const refrescada = await fetchOrdenDetalle(dbId).catch(() => updated ?? { ...actual, ...patch });
-      setOrdenes((os) => os.map((o) => (o.id === id ? refrescada : o)));
+      if (!updated) return;
+      setOrdenes((os) => os.map((o) => (o.id === id ? updated : o)));
       if (msg) showToast(msg);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'No se pudo actualizar la orden');
+      showToast(err instanceof Error ? err.message : 'No se pudo actualizar la orden', 'error');
     }
   };
 
@@ -238,14 +246,28 @@ export default function App() {
       setServicios((ss) => (ss.some((x) => x.id === guardado.id) ? ss.map((x) => (x.id === guardado.id ? guardado : x)) : [...ss, guardado]));
       showToast('Catálogo actualizado');
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'No se pudo guardar el servicio');
+      showToast(err instanceof Error ? err.message : 'No se pudo guardar el servicio', 'error');
     }
   };
 
   const abrirNotif = async (n: Notificacion) => {
-    setNotifs((ns) => ns.map((x) => (x.id === n.id ? { ...x, leida: true } : x)));
-    marcarNotifLeidaApi(n.id).catch(() => {});
-    go(n.accion.destino);
+    try {
+      await marcarNotifLeidaApi(n.id);
+      setNotifs((ns) => ns.map((x) => (x.id === n.id ? { ...x, leida: true } : x)));
+      go(n.accion.destino);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'No se pudo marcar la notificación como leída', 'error');
+    }
+  };
+
+  const marcarTodasLeidas = async () => {
+    try {
+      await marcarTodasNotifsLeidasApi();
+      setNotifs((ns) => ns.map((n) => ({ ...n, leida: true })));
+      showToast('Todas marcadas como leídas');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'No se pudieron marcar las notificaciones como leídas', 'error');
+    }
   };
 
   switch (page.name) {
@@ -282,11 +304,7 @@ export default function App() {
           shell={shell}
           notifs={notifs}
           onOpen={abrirNotif}
-          onMarkAll={() => {
-            setNotifs((ns) => ns.map((n) => ({ ...n, leida: true })));
-            marcarTodasNotifsLeidasApi().catch(() => {});
-            showToast('Todas marcadas como leídas');
-          }}
+          onMarkAll={marcarTodasLeidas}
         />
       );
   }

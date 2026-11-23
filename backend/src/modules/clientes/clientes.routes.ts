@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { query } from '../../db/pool';
 import { soloPersonal } from '../../middlewares/auth';
-import { ah, ok } from '../../utils/http';
+import { asyncHandler as ah } from '../../utils/asyncHandler';
+import { ok } from '../../utils/http';
 
 /** Clientes con sus vehículos: lo usa la web para "Nueva orden". Solo personal. */
 export const clientesRouter = Router();

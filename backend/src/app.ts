@@ -22,7 +22,8 @@ export function createApp() {
     try {
       await query('SELECT 1 AS ok');
       res.json({ status: 'ok', db: true });
-    } catch {
+    } catch (error) {
+      console.error('Falló la comprobación de conexión a SQL Server:', error);
       res.status(503).json({ status: 'error', db: false });
     }
   });

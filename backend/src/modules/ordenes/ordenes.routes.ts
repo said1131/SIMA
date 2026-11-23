@@ -2,7 +2,8 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth, soloPersonal } from '../../middlewares/auth';
 import { ORDEN_ESTADOS, TIPOS_CONCEPTO } from '../../types';
-import { ah, idParam, ok } from '../../utils/http';
+import { asyncHandler as ah } from '../../utils/asyncHandler';
+import { idParam, ok } from '../../utils/http';
 import * as svc from './ordenes.service';
 
 export const ordenesRouter = Router();

@@ -39,19 +39,39 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     throw new Error('No se pudo conectar con el servidor SIMA (puerto 3000).');
   }
 
-  const body = await res.json().catch(() => ({}));
+  let body: unknown;
+  try {
+    body = await res.json();
+  } catch {
+    if (res.ok) throw new Error('El servidor devolvió una respuesta JSON no válida.');
+    body = {};
+  }
+  if (typeof body !== 'object' || body === null) {
+    if (res.ok) throw new Error('El servidor devolvió una respuesta inválida.');
+    body = {};
+  }
+
+  const bodyObject = body as Record<string, unknown>;
   if (!res.ok) {
     if (res.status === 401) {
       clearSession();
     }
-    const errObj = body?.error;
-    const detail = Array.isArray(errObj?.details) && errObj.details[0]?.mensaje
-      ? `: ${errObj.details[0].mensaje}`
+    const errorObject = typeof bodyObject.error === 'object' && bodyObject.error !== null
+      ? bodyObject.error as Record<string, unknown>
+      : {};
+    const details = Array.isArray(errorObject.details) ? errorObject.details : [];
+    const firstDetail = details[0];
+    const detailMessage = typeof firstDetail === 'object' && firstDetail !== null
+      ? (firstDetail as Record<string, unknown>).mensaje
+      : undefined;
+    const detail = typeof detailMessage === 'string' && detailMessage
+      ? `: ${detailMessage}`
       : '';
-    throw new Error((errObj?.message || `Error HTTP ${res.status}`) + detail);
+    const message = typeof errorObject.message === 'string' ? errorObject.message : `Error HTTP ${res.status}`;
+    throw new Error(message + detail);
   }
 
-  return (body?.data !== undefined ? body.data : body) as T;
+  return (bodyObject.data !== undefined ? bodyObject.data : body) as T;
 }
 
 function mapCita(raw: Record<string, unknown>): Cita {
@@ -217,7 +237,7 @@ export async function fetchOrdenes(): Promise<Orden[]> {
   const data = await request<Record<string, unknown>[]>('/ordenes');
   const lista = Array.isArray(data) ? data.map(mapOrden) : [];
   return Promise.all(
-    lista.map((o) => (o.dbId != null ? fetchOrdenDetalle(o.dbId).catch(() => o) : Promise.resolve(o)))
+    lista.map((o) => (o.dbId != null ? fetchOrdenDetalle(o.dbId) : Promise.resolve(o)))
   );
 }
 

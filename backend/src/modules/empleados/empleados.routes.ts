@@ -3,7 +3,8 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { query } from '../../db/pool';
 import { soloAdmin } from '../../middlewares/auth';
-import { ah, ok } from '../../utils/http';
+import { asyncHandler as ah } from '../../utils/asyncHandler';
+import { ok } from '../../utils/http';
 import { HttpError } from '../../utils/httpError';
 
 export const empleadosRouter = Router();

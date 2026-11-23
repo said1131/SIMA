@@ -2,7 +2,8 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../../middlewares/auth';
 import { rateLimit } from '../../middlewares/rateLimit';
-import { ah, ok } from '../../utils/http';
+import { asyncHandler as ah } from '../../utils/asyncHandler';
+import { ok } from '../../utils/http';
 import { notFound } from '../../utils/httpError';
 import * as svc from './auth.service';
 

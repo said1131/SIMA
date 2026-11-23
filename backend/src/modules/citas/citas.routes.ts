@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { requireAuth, soloCliente, soloPersonal } from '../../middlewares/auth';
 import { rateLimit } from '../../middlewares/rateLimit';
 import { CITA_ESTADOS } from '../../types';
-import { ah, FECHA, HORA, idParam, ok } from '../../utils/http';
+import { asyncHandler as ah } from '../../utils/asyncHandler';
+import { FECHA, HORA, idParam, ok } from '../../utils/http';
 import * as svc from './citas.service';
 
 export const citasRouter = Router();

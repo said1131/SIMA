@@ -5,7 +5,8 @@ import type { IconName } from './Icons';
 
 export interface ShellProps {
   unread: number;
-  toast: string | null;
+  loading: boolean;
+  toast: { message: string; tone: 'success' | 'error' } | null;
   userName: string;
   onNavigate: (p: Page) => void;
   onLogout: () => void;
@@ -76,7 +77,16 @@ export function Layout({ shell, active, title, subtitle, actions, children }: La
             {subtitle && <p>{subtitle}</p>}
           </div>
           <div className="topbar-right">
-            {shell.toast && <span className="toast">✓ {shell.toast}</span>}
+            {shell.loading && <span className="sync-status" role="status" aria-live="polite">Sincronizando datos...</span>}
+            {shell.toast && (
+              <span
+                className={`toast ${shell.toast.tone}`}
+                role={shell.toast.tone === 'error' ? 'alert' : 'status'}
+                aria-live={shell.toast.tone === 'error' ? 'assertive' : 'polite'}
+              >
+                {shell.toast.tone === 'error' ? '! ' : '✓ '}{shell.toast.message}
+              </span>
+            )}
             {actions}
             <button className="bell" onClick={() => shell.onNavigate({ name: 'notificaciones' })} aria-label="Notificaciones">
               <Icon name="bell" size={18} />

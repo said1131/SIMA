@@ -2,10 +2,13 @@ import sql from 'mssql';
 import { env } from '../config/env';
 
 let pool: sql.ConnectionPool | null = null;
+let poolPromise: Promise<sql.ConnectionPool> | null = null;
 
 export async function getPool(): Promise<sql.ConnectionPool> {
   if (pool && pool.connected) return pool;
-  pool = await new sql.ConnectionPool({
+  if (poolPromise) return poolPromise;
+
+  const pending = new sql.ConnectionPool({
     server: env.DB_SERVER,
     port: env.DB_PORT,
     database: env.DB_NAME,
@@ -14,7 +17,23 @@ export async function getPool(): Promise<sql.ConnectionPool> {
     options: { encrypt: env.DB_ENCRYPT, trustServerCertificate: true },
     pool: { max: 10, min: 0, idleTimeoutMillis: 30_000 },
   }).connect();
-  return pool;
+  poolPromise = pending;
+
+  try {
+    const connectedPool = await pending;
+    pool = connectedPool;
+    connectedPool.on('error', (error) => {
+      console.error('Error en el pool de SQL Server:', error);
+      if (pool === connectedPool) {
+        pool = null;
+        poolPromise = null;
+      }
+    });
+    return connectedPool;
+  } catch (error) {
+    if (poolPromise === pending) poolPromise = null;
+    throw error;
+  }
 }
 
 type Params = Record<string, unknown>;

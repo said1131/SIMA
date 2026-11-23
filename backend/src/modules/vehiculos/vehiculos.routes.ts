@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { isStaff, requireAuth, soloCliente } from '../../middlewares/auth';
-import { ah, idParam, ok } from '../../utils/http';
+import { asyncHandler as ah } from '../../utils/asyncHandler';
+import { idParam, ok } from '../../utils/http';
 import * as svc from './vehiculos.service';
 
 export const vehiculosRouter = Router();

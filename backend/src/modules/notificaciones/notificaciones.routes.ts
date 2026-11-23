@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../../middlewares/auth';
-import { ah, idParam, ok } from '../../utils/http';
+import { asyncHandler as ah } from '../../utils/asyncHandler';
+import { idParam, ok } from '../../utils/http';
 import { notFound } from '../../utils/httpError';
 import * as svc from './notificaciones.service';
 
