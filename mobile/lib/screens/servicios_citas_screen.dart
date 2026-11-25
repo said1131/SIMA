@@ -46,9 +46,12 @@ class _ServiciosCitasScreenState extends State<ServiciosCitasScreen> {
     if (mostrarCatalogo) {
       datos.cargarCatalogoPublico();
     } else {
-      // Consulta al servidor lo que el sitio web del taller haya actualizado
       datos.cargarCitas();
     }
+  }
+
+  String _normalizarCategoria(String cat) {
+    return cat == 'Preventivo' ? 'Preventivo' : 'Correctivo';
   }
 
   Future<void> _cancelarCita(Cita c) async {
@@ -98,8 +101,9 @@ class _ServiciosCitasScreenState extends State<ServiciosCitasScreen> {
     const rojoSima = Color(0xFFD92323);
 
     final serviciosFiltrados = datos.catalogo.where((s) {
+      final catNormalizada = _normalizarCategoria(s.categoria);
       final coincideCat =
-          filtroCategoria == 'Todos' || s.categoria == filtroCategoria;
+          filtroCategoria == 'Todos' || catNormalizada == filtroCategoria;
       final coincideBusq =
           s.titulo.toLowerCase().contains(textoBusqueda.toLowerCase());
       return coincideCat && coincideBusq;
@@ -241,10 +245,7 @@ class _ServiciosCitasScreenState extends State<ServiciosCitasScreen> {
                   children: [
                     'Todos',
                     'Preventivo',
-                    'Frenos',
-                    'Eléctrico',
-                    'Suspensión',
-                    'Motor',
+                    'Correctivo',
                   ].map((cat) {
                     final sel = filtroCategoria == cat;
                     return Padding(
@@ -273,6 +274,7 @@ class _ServiciosCitasScreenState extends State<ServiciosCitasScreen> {
                     itemCount: serviciosFiltrados.length,
                     itemBuilder: (_, i) {
                       final s = serviciosFiltrados[i];
+                      final catMostrar = _normalizarCategoria(s.categoria);
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(14),
@@ -284,7 +286,7 @@ class _ServiciosCitasScreenState extends State<ServiciosCitasScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              s.categoria.toUpperCase(),
+                              catMostrar.toUpperCase(),
                               style: const TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,

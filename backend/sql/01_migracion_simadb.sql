@@ -99,10 +99,16 @@ IF COL_LENGTH('dbo.Servicios', 'garantia_meses') IS NULL
     ALTER TABLE dbo.Servicios ADD garantia_meses INT NOT NULL
         CONSTRAINT DF_Servicios_garantia DEFAULT 1;
 
-IF OBJECT_ID(N'dbo.CK_Servicios_categoria', N'C') IS NULL
-    EXEC (N'ALTER TABLE dbo.Servicios WITH NOCHECK ADD CONSTRAINT CK_Servicios_categoria
-            CHECK (categoria IN (N''Preventivo'', N''Frenos'', N''Eléctrico'', N''Suspensión'', N''Motor''))');
+IF OBJECT_ID(N'dbo.CK_Servicios_categoria', N'C') IS NOT NULL
+    ALTER TABLE dbo.Servicios DROP CONSTRAINT CK_Servicios_categoria;
 
+UPDATE dbo.Servicios
+SET categoria = N'Correctivo'
+WHERE categoria <> N'Preventivo' OR categoria IS NULL;
+
+EXEC (N'ALTER TABLE dbo.Servicios ADD CONSTRAINT CK_Servicios_categoria
+        CHECK (categoria IN (N''Preventivo'', N''Correctivo''))');
+        
 /* ---------------------------------------------------------------------
    5. CITAS  ·  motivo de rechazo, cita exprés y estados válidos
    --------------------------------------------------------------------- */

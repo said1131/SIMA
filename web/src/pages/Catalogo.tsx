@@ -11,7 +11,10 @@ interface Props {
   onSave: (s: Servicio) => void;
 }
 
-const CATEGORIAS: Categoria[] = ['Preventivo', 'Frenos', 'Eléctrico', 'Suspensión', 'Motor'];
+const CATEGORIAS: Categoria[] = ['Preventivo', 'Correctivo'];
+
+const normalizarCategoria = (cat?: string): Categoria =>
+  cat?.trim().toLowerCase() === 'preventivo' ? 'Preventivo' : 'Correctivo';
 
 const VACIO: Servicio = {
   id: '',
@@ -29,7 +32,7 @@ export default function Catalogo({ shell, servicios, onSave }: Props) {
   const [editando, setEditando] = useState<Servicio | null>(null);
   const [error, setError] = useState('');
 
-  const lista = servicios.filter((s) => filtro === 'Todos' || s.categoria === filtro);
+  const lista = servicios.filter((s) => filtro === 'Todos' || normalizarCategoria(s.categoria) === filtro);
 
   const guardar = () => {
     if (!editando) return;
@@ -47,7 +50,7 @@ export default function Catalogo({ shell, servicios, onSave }: Props) {
       shell={shell}
       active="catalogo"
       title="Catálogo de servicios"
-      subtitle="Lo que ven tus clientes en la app"
+      subtitle="Ofrecimientos"
       actions={<button className="btn red" onClick={() => { setEditando({ ...VACIO }); setError(''); }}>+ Nuevo servicio</button>}
     >
       <div className="chips">
@@ -61,7 +64,7 @@ export default function Catalogo({ shell, servicios, onSave }: Props) {
           {lista.map((s) => (
             <div key={s.id} className={'svc-card' + (editando?.id === s.id ? ' selected' : '')} style={{ opacity: s.activo ? 1 : 0.6 }}>
               <div className="svc-head">
-                <span className="tag">{s.categoria.toUpperCase()}</span>
+                <span className="tag">{normalizarCategoria(s.categoria).toUpperCase()}</span>
                 <Icon name="wrench" size={22} />
               </div>
               <div className="svc-body">
@@ -77,7 +80,15 @@ export default function Catalogo({ shell, servicios, onSave }: Props) {
                 <p>{s.descripcion}</p>
                 <p>{s.duracion} h · Garantía {s.garantia} {s.garantia === 1 ? 'mes' : 'meses'}</p>
                 <div className="svc-price"><small>DESDE </small>{fmtMoney(s.precio)}</div>
-                <button className="btn sm ghost" onClick={() => { setEditando({ ...s }); setError(''); }}>Editar</button>
+                <button
+                  className="btn sm ghost"
+                  onClick={() => {
+                    setEditando({ ...s, categoria: normalizarCategoria(s.categoria) });
+                    setError('');
+                  }}
+                >
+                  Editar
+                </button>
               </div>
             </div>
           ))}

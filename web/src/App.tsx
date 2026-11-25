@@ -274,7 +274,7 @@ export default function App() {
     case 'dashboard':
       return <Dashboard shell={shell} citas={citas} ordenes={ordenes} go={go} />;
     case 'citas':
-      return <Citas shell={shell} citas={citas} onConfirmar={confirmarCita} onRechazar={rechazarCita} go={go} />;
+      return <Citas shell={shell} citas={citas} ordenes={ordenes} onConfirmar={confirmarCita} onRechazar={rechazarCita} go={go} />;
     case 'ordenes':
       return <Ordenes shell={shell} ordenes={ordenes} go={go} />;
     case 'nueva-orden':

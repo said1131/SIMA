@@ -1,4 +1,4 @@
-export type CitaEstado = 'Solicitada' | 'Confirmada' | 'Rechazada';
+export type CitaEstado = 'Solicitada' | 'Confirmada' | 'Rechazada' | 'Cancelada';
 
 export interface Cita {
   id: string;
@@ -67,7 +67,7 @@ export interface Cliente {
   vehiculos: { id?: number; descripcion: string; placas: string }[];
 }
 
-export type Categoria = 'Preventivo' | 'Frenos' | 'Eléctrico' | 'Suspensión' | 'Motor';
+export type Categoria =  'Preventivo' | 'Correctivo';
 
 export interface Servicio {
   id: string;

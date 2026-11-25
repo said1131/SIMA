@@ -25,6 +25,45 @@ export interface CitaRow {
   fecha: string; hora: string; estado: string; expres: boolean; motivoRechazo: string | null;
 }
 
+export async function horariosOcupados(fecha: string): Promise<string[]> {
+  const rows = await query<{ hora: string }>(
+    `SELECT CONVERT(varchar(5), hora, 108) AS hora
+     FROM Citas
+     WHERE fecha = @fecha AND estado IN (N'Solicitada', N'Confirmada')`,
+    { fecha: sqlDate(fecha) }
+  );
+  return rows.map((r) => r.hora);
+}
+
+export async function diasLlenosMes(anio: number, mes: number): Promise<string[]> {
+  const rows = await query<{ fecha: string }>(
+    `SELECT CONVERT(varchar(10), fecha, 23) AS fecha
+     FROM Citas
+     WHERE YEAR(fecha) = @anio
+       AND MONTH(fecha) = @mes
+       AND estado IN (N'Solicitada', N'Confirmada')
+     GROUP BY fecha
+     HAVING COUNT(DISTINCT CONVERT(varchar(5), hora, 108)) >= 5`,
+    { anio, mes }
+  );
+  return rows.map((r) => r.fecha);
+}
+
+async function verificarHorarioDisponible(fecha: string, hora: string, tx?: Transaction): Promise<void> {
+  const rows = await query<{ total: number }>(
+    `SELECT COUNT(*) AS total
+     FROM Citas
+     WHERE fecha = @fecha
+       AND CONVERT(varchar(5), hora, 108) = @hora
+       AND estado IN (N'Solicitada', N'Confirmada')`,
+    { fecha: sqlDate(fecha), hora },
+    tx
+  );
+  if ((rows[0]?.total ?? 0) > 0) {
+    throw conflict(`El horario ${hora} del ${fmtFecha(fecha)} ya está ocupado. Elige otro horario o fecha.`);
+  }
+}
+
 export function listar(user: AuthUser, estado?: string): Promise<CitaRow[]> {
   const where: string[] = [];
   const params: Record<string, unknown> = {};
@@ -60,6 +99,7 @@ export interface NuevaCita { vehiculoId: number; servicioId: number; fecha: stri
 /** Cita normal: la crea un cliente con cuenta desde la app. */
 export async function crear(user: AuthUser, i: NuevaCita): Promise<CitaRow> {
   validarFechaHora(i.fecha);
+  await verificarHorarioDisponible(i.fecha, i.hora);
   const veh = await query('SELECT 1 AS x FROM Vehiculos WHERE id_vehiculo=@v AND id_usuario=@u', { v: i.vehiculoId, u: user.id });
   if (!veh[0]) throw badRequest('El vehículo no pertenece a tu cuenta');
   const servicio = await servicioActivo(i.servicioId);
@@ -88,6 +128,7 @@ export interface NuevaCitaExpres {
 export async function crearExpres(i: NuevaCitaExpres): Promise<CitaRow> {
   validarFechaHora(i.fecha);
   const id = await withTransaction(async (tx) => {
+    await verificarHorarioDisponible(i.fecha, i.hora, tx);
     const servicio = await servicioActivo(i.servicioId, tx);
 
     const u = await query<{ id: number }>(

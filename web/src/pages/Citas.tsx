@@ -3,11 +3,12 @@ import { Layout } from '../components/Layout';
 import type { ShellProps } from '../components/Layout';
 import { Icon } from '../components/Icons';
 import { diasDesdeHoy, fmtFecha } from '../data';
-import type { Cita, CitaEstado, Page } from '../types';
+import type { Cita, CitaEstado, Orden, Page } from '../types';
 
 interface Props {
   shell: ShellProps;
   citas: Cita[];
+  ordenes: Orden[];
   onConfirmar: (id: string) => void;
   onRechazar: (id: string, motivo: string) => void;
   go: (p: Page) => void;
@@ -26,13 +27,13 @@ function cuando(c: Cita): string {
   return `${dia} · ${c.hora}`;
 }
 
-export default function Citas({ shell, citas, onConfirmar, onRechazar, go }: Props) {
+export default function Citas({ shell, citas, ordenes, onConfirmar, onRechazar, go }: Props) {
   const [filtro, setFiltro] = useState<'Todas' | CitaEstado>('Todas');
   const [rechazando, setRechazando] = useState<Cita | null>(null);
   const [motivo, setMotivo] = useState(MOTIVOS[0]);
   const [detalle, setDetalle] = useState('');
 
-  const filtros: ('Todas' | CitaEstado)[] = ['Todas', 'Solicitada', 'Confirmada', 'Rechazada'];
+  const filtros: ('Todas' | CitaEstado)[] = ['Todas', 'Solicitada', 'Confirmada', 'Rechazada', 'Cancelada'];
   const count = (f: 'Todas' | CitaEstado) => (f === 'Todas' ? citas.length : citas.filter((c) => c.estado === f).length);
   const lista = citas
     .filter((c) => filtro === 'Todas' || c.estado === filtro)
@@ -51,6 +52,12 @@ export default function Citas({ shell, citas, onConfirmar, onRechazar, go }: Pro
     cerrar();
   };
 
+  const getTagClass = (estado: CitaEstado) => {
+    if (estado === 'Confirmada') return 'green';
+    if (estado === 'Rechazada' || estado === 'Cancelada') return 'red';
+    return 'amber';
+  };
+
   return (
     <Layout shell={shell} active="citas" title="Citas" subtitle="Solicitudes de los clientes y agenda del taller">
       <div className="chips">
@@ -63,44 +70,56 @@ export default function Citas({ shell, citas, onConfirmar, onRechazar, go }: Pro
 
       {lista.length === 0 && <div className="card empty">No hay citas en esta categoría</div>}
 
-      {lista.map((c) => (
-        <div className="cita-row" key={c.id}>
-          <div className="who">
-            <div className="vehicle-icon"><Icon name="car" /></div>
-            <div>
+      {lista.map((c) => {
+        const yaTieneOrden = ordenes.some((o) => o.citaId != null && String(o.citaId) === String(c.id));
+
+        return (
+          <div className="cita-row" key={c.id}>
+            <div className="who">
+              <div className="vehicle-icon"><Icon name="car" /></div>
               <div>
-                {c.expres && <span className="tag amber" style={{ marginRight: 6 }}>CITA EXPRÉS</span>}
-                <span className="service-tag">{c.servicio}</span>
+                <div>
+                  {c.expres && <span className="tag amber" style={{ marginRight: 6 }}>CITA EXPRÉS</span>}
+                  <span className="service-tag">{c.servicio}</span>
+                </div>
+                <div className="name">
+                  {c.cliente}
+                  {c.expres && <span className="sub"> · sin cuenta{c.telefono ? ` · ${c.telefono}` : ''}</span>}
+                </div>
+                <div className="sub">{c.vehiculo} · {c.placas}</div>
               </div>
-              <div className="name">
-                {c.cliente}
-                {c.expres && <span className="sub"> · sin cuenta{c.telefono ? ` · ${c.telefono}` : ''}</span>}
-              </div>
-              <div className="sub">{c.vehiculo} · {c.placas}</div>
+            </div>
+            <div>
+              <div style={{ fontWeight: 700 }}>{cuando(c)}</div>
+              <div className="sub">{fmtFecha(c.fecha)}</div>
+            </div>
+            <div>
+              <span className={'tag ' + getTagClass(c.estado)}>
+                {c.estado}
+              </span>
+            </div>
+            <div className="cita-actions">
+              {c.estado === 'Solicitada' && (
+                <>
+                  <button className="btn sm red" onClick={() => onConfirmar(c.id)}>Confirmar</button>
+                  <button className="btn sm ghost" onClick={() => abrir(c)}>Rechazar</button>
+                </>
+              )}
+              {c.estado === 'Confirmada' && (
+                yaTieneOrden ? (
+                  <button className="btn sm ghost" disabled style={{ opacity: 0.65, cursor: 'not-allowed' }}>
+                    Orden creada
+                  </button>
+                ) : (
+                  <button className="btn sm" onClick={() => go({ name: 'nueva-orden', citaId: c.id })}>
+                    Crear orden
+                  </button>
+                )
+              )}
             </div>
           </div>
-          <div>
-            <div style={{ fontWeight: 700 }}>{cuando(c)}</div>
-            <div className="sub">{fmtFecha(c.fecha)}</div>
-          </div>
-          <div>
-            <span className={'tag ' + (c.estado === 'Confirmada' ? 'green' : c.estado === 'Rechazada' ? 'red' : 'amber')}>
-              {c.estado}
-            </span>
-          </div>
-          <div className="cita-actions">
-            {c.estado === 'Solicitada' && (
-              <>
-                <button className="btn sm red" onClick={() => onConfirmar(c.id)}>Confirmar</button>
-                <button className="btn sm ghost" onClick={() => abrir(c)}>Rechazar</button>
-              </>
-            )}
-            {c.estado === 'Confirmada' && (
-              <button className="btn sm" onClick={() => go({ name: 'nueva-orden', citaId: c.id })}>Crear orden</button>
-            )}
-          </div>
-        </div>
-      ))}
+        );
+      })}
 
       {rechazando && (
         <div className="overlay" onClick={cerrar}>

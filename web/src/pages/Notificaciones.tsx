@@ -55,7 +55,7 @@ export default function Notificaciones({ shell, notifs, onOpen, onMarkAll }: Pro
           style={{
             background: '#fff',
             border: '1px solid var(--line)',
-            borderLeft: n.leida ? '1px solid var(--line)' : '4px solid var(--red)',
+            borderLeft: `4px solid ${COLOR[n.tono]}`,
             padding: '12px 14px',
             marginBottom: 10,
           }}

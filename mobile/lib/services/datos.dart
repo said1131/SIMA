@@ -190,6 +190,34 @@ class DatosSima extends ChangeNotifier {
     await cargarVehiculos();
   }
 
+  Future<List<String>> obtenerHorasOcupadas(String fechaIso) async {
+    try {
+      final res = await _api.dio.get(
+        '/citas/disponibilidad',
+        queryParameters: {'fecha': fechaIso},
+      );
+      final data = res.data['data'];
+      if (data is List) {
+        return data.map((e) => e.toString()).toList();
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  Future<List<String>> obtenerDiasLlenosMes(int anio, int mes) async {
+    try {
+      final res = await _api.dio.get(
+        '/citas/dias-llenos',
+        queryParameters: {'anio': anio, 'mes': mes},
+      );
+      final data = res.data['data'];
+      if (data is List) {
+        return data.map((e) => e.toString()).toList();
+      }
+    } catch (_) {}
+    return [];
+  }
+
   Future<void> cargarCitas() async {
     final res = await _api.dio.get('/citas');
     final lista = (res.data['data'] as List)

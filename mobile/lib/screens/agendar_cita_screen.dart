@@ -16,11 +16,15 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
   final datos = DatosSima();
   late Servicio _servicioElegido;
   int _vehiculoIndex = 0;
-  int _diaElegido = 18;
-  String _horaElegida = '10:00';
+
+  late final List<DateTime> _fechasHabiles;
+  late DateTime _fechaElegida;
+  String? _horaElegida;
+
+  List<String> _horasOcupadas = [];
+  bool _cargandoHoras = false;
   bool _enviando = false;
 
-  final List<int> _diasDisponibles = [16, 17, 18, 19, 20, 21, 23, 24, 25, 26, 27, 28, 30];
   final List<String> _horarios = ['09:00', '10:00', '11:00', '14:00', '16:00'];
 
   @override
@@ -28,29 +32,88 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
     super.initState();
     _servicioElegido = widget.servicioInicial;
     _vehiculoIndex = datos.vehiculoActivoIndex;
+    _fechasHabiles = _generarProximosDiasHabiles(21);
+    _fechaElegida = _fechasHabiles.first;
+    _cargarDisponibilidad();
+  }
+
+  List<DateTime> _generarProximosDiasHabiles(int cantidad) {
+    final hoy = DateTime.now();
+    final base = DateTime(hoy.year, hoy.month, hoy.day);
+    final lista = <DateTime>[];
+    int offset = 0;
+    while (lista.length < cantidad) {
+      final candidato = base.add(Duration(days: offset));
+      if (candidato.weekday != DateTime.sunday) {
+        lista.add(candidato);
+      }
+      offset++;
+    }
+    return lista;
+  }
+
+  String _toIso(DateTime d) {
+    final y = d.year.toString();
+    final m = d.month.toString().padLeft(2, '0');
+    final day = d.day.toString().padLeft(2, '0');
+    return '$y-$m-$day';
+  }
+
+  String _etiquetaDia(DateTime d) {
+    const dias = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+    const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    return '${dias[d.weekday - 1]} ${d.day} ${meses[d.month - 1]}';
+  }
+
+  Future<void> _cargarDisponibilidad() async {
+    setState(() => _cargandoHoras = true);
+    final ocupadas = await datos.obtenerHorasOcupadas(_toIso(_fechaElegida));
+    if (!mounted) return;
+
+    final disponibles = _horarios.where((h) => !ocupadas.contains(h)).toList();
+    setState(() {
+      _horasOcupadas = ocupadas;
+      if (_horaElegida == null || !disponibles.contains(_horaElegida)) {
+        _horaElegida = disponibles.isNotEmpty ? disponibles.first : null;
+      }
+      _cargandoHoras = false;
+    });
   }
 
   Future<void> _confirmar() async {
     if (datos.vehiculos.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Primero registra un vehículo.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Primero registra un vehículo.')),
+      );
       return;
     }
+    if (_horaElegida == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No hay horarios disponibles en esa fecha. Elige otro día.')),
+      );
+      return;
+    }
+
     setState(() => _enviando = true);
     try {
       final veh = datos.vehiculos[_vehiculoIndex];
-      final d = _diaElegido.toString().padLeft(2, '0');
       await datos.crearCita(
         vehiculoId: veh.idNumerico,
         servicioId: _servicioElegido.idNumerico,
-        fechaIso: '2026-11-$d',
-        hora: _horaElegida,
+        fechaIso: _toIso(_fechaElegida),
+        hora: _horaElegida!,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('¡Cita agendada!')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('¡Cita agendada!')),
+      );
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ApiClient.mensajeError(e))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(ApiClient.mensajeError(e))),
+      );
+      _cargarDisponibilidad();
     } finally {
       if (mounted) setState(() => _enviando = false);
     }
@@ -60,6 +123,8 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
   Widget build(BuildContext context) {
     const azulSima = Color(0xFF102566);
     const rojoSima = Color(0xFFD92323);
+
+    final diaLleno = !_cargandoHoras && _horasOcupadas.length >= _horarios.length;
 
     return Scaffold(
       appBar: AppBar(
@@ -111,76 +176,88 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
                 onChanged: (v) => setState(() => _vehiculoIndex = v!),
               ),
             const SizedBox(height: 16),
-            const Text('Fecha (Noviembre 2026)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            const Text('Fecha disponible', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
             const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
-              child: GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: 30,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 7,
-                  mainAxisSpacing: 6,
-                  crossAxisSpacing: 6,
-                ),
-                itemBuilder: (_, index) {
-                  final dia = index + 1;
-                  final disp = _diasDisponibles.contains(dia);
-                  final sel = dia == _diaElegido;
-                  return GestureDetector(
-                    onTap: disp ? () => setState(() => _diaElegido = dia) : null,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: sel ? azulSima : (disp ? Colors.white : Colors.grey[100]),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: disp ? Colors.grey.shade300 : Colors.transparent),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '$dia',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: sel ? Colors.white : (disp ? Colors.black87 : Colors.grey[400]),
-                          ),
-                        ),
+            SizedBox(
+              height: 44,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: _fechasHabiles.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                itemBuilder: (_, i) {
+                  final f = _fechasHabiles[i];
+                  final sel = _toIso(f) == _toIso(_fechaElegida);
+                  return ChoiceChip(
+                    label: Text(
+                      _etiquetaDia(f),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: sel ? Colors.white : azulSima,
                       ),
                     ),
+                    selected: sel,
+                    selectedColor: azulSima,
+                    backgroundColor: Colors.white,
+                    onSelected: (_) {
+                      setState(() => _fechaElegida = f);
+                      _cargarDisponibilidad();
+                    },
                   );
                 },
               ),
             ),
             const SizedBox(height: 16),
-            const Text('Hora disponible', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: _horarios.map((h) {
-                final sinCupo = h == '14:00';
-                final elegida = h == _horaElegida;
-                return ChoiceChip(
-                  label: Text(
-                    h,
-                    style: TextStyle(
-                      decoration: sinCupo ? TextDecoration.lineThrough : null,
-                      color: elegida ? Colors.white : (sinCupo ? Colors.grey : Colors.black87),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  selected: elegida,
-                  selectedColor: azulSima,
-                  onSelected: sinCupo ? null : (_) => setState(() => _horaElegida = h),
-                );
-              }).toList(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Hora disponible', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                if (_cargandoHoras)
+                  const SizedBox(height: 14, width: 14, child: CircularProgressIndicator(strokeWidth: 2)),
+              ],
             ),
+            const SizedBox(height: 8),
+            if (diaLleno)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFDE8E8),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Text(
+                  'Todos los horarios de este día están ocupados. Selecciona otra fecha.',
+                  style: TextStyle(color: rojoSima, fontWeight: FontWeight.w600, fontSize: 12),
+                ),
+              )
+            else
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _horarios.map((h) {
+                  final sinCupo = _horasOcupadas.contains(h);
+                  final elegida = h == _horaElegida;
+                  return ChoiceChip(
+                    label: Text(
+                      sinCupo ? '$h (Ocupado)' : h,
+                      style: TextStyle(
+                        decoration: sinCupo ? TextDecoration.lineThrough : null,
+                        color: elegida ? Colors.white : (sinCupo ? Colors.grey : Colors.black87),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    selected: elegida,
+                    selectedColor: azulSima,
+                    onSelected: sinCupo ? null : (_) => setState(() => _horaElegida = h),
+                  );
+                }).toList(),
+              ),
             const SizedBox(height: 22),
             SizedBox(
               width: double.infinity,
               height: 48,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(backgroundColor: rojoSima, foregroundColor: Colors.white),
-                onPressed: _enviando ? null : _confirmar,
+                onPressed: (_enviando || _cargandoHoras || diaLleno) ? null : _confirmar,
                 child: _enviando
                     ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                     : const Text('Confirmar cita', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),

@@ -2,7 +2,6 @@ import { Layout } from '../components/Layout';
 import type { ShellProps } from '../components/Layout';
 import { Icon } from '../components/Icons';
 import type { IconName } from '../components/Icons';
-import { HOY } from '../data';
 import type { Cita, Orden, Page } from '../types';
 
 interface Props {
@@ -13,16 +12,35 @@ interface Props {
 }
 
 const ESTADOS: { label: string; color: string; match: (o: Orden) => boolean }[] = [
-  { label: 'Solicitada', color: '#e0a526', match: (o) => o.estado === 'Recibida' },
+  { label: 'Recibida', color: '#e0a526', match: (o) => o.estado === 'Recibida' },
   { label: 'En diagnóstico', color: '#6a4fd1', match: (o) => o.estado === 'En diagnóstico' },
-  { label: 'Cotizada', color: '#16217a', match: (o) => o.estado === 'Cotizada' || o.estado === 'Autorizada' },
+  { label: 'Cotizada', color: '#16217a', match: (o) => o.estado === 'Cotizada' },
+  { label: 'Autorizada', color: '#2b6cb0', match: (o) => o.estado === 'Autorizada' },
   { label: 'En reparación', color: '#d8392b', match: (o) => o.estado === 'En reparación' },
   { label: 'Lista', color: '#2f9e57', match: (o) => o.estado === 'Lista' },
+  { label: 'Entregada', color: '#6b7088', match: (o) => o.estado === 'Entregada' },
 ];
 
+function getFechaLocal() {
+  const ahora = new Date();
+  const year = ahora.getFullYear();
+  const month = String(ahora.getMonth() + 1).padStart(2, '0');
+  const day = String(ahora.getDate()).padStart(2, '0');
+
+  const iso = `${year}-${month}-${day}`; 
+  const legible = ahora.toLocaleDateString('es-MX', {
+    day: 'numeric',
+    month: 'long',
+  }); 
+
+  return { iso, legible };
+}
+
 export default function Dashboard({ shell, citas, ordenes, go }: Props) {
+  const { iso: hoyIso, legible: hoyLegible } = getFechaLocal();
+
   const porConfirmar = citas.filter((c) => c.estado === 'Solicitada').length;
-  const hoy = citas.filter((c) => c.fecha === HOY && c.estado !== 'Rechazada');
+  const hoy = citas.filter((c) => c.fecha === hoyIso && c.estado !== 'Rechazada');
   const enRep = ordenes.filter((o) => o.estado === 'En reparación').length;
   const listas = ordenes.filter((o) => o.estado === 'Lista').length;
   const counts = ESTADOS.map((e) => ({ ...e, n: ordenes.filter(e.match).length }));
@@ -36,7 +54,12 @@ export default function Dashboard({ shell, citas, ordenes, go }: Props) {
   ];
 
   return (
-    <Layout shell={shell} active="dashboard" title="Panel de inicio" subtitle="Resumen del día · 24 de octubre">
+    <Layout
+      shell={shell}
+      active="dashboard"
+      title="Panel de inicio"
+      subtitle={`Resumen del día · ${hoyLegible}`}
+    >
       <div className="banner">
         <div>
           <h2>

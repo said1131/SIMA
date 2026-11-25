@@ -58,7 +58,7 @@ CREATE TABLE dbo.Servicios (
     precio_estimado DECIMAL(12,2) NOT NULL CONSTRAINT CK_Servicios_precio CHECK (precio_estimado >= 0),
     activo          BIT NOT NULL CONSTRAINT DF_Servicios_activo DEFAULT 1,
     categoria       NVARCHAR(30)  NOT NULL CONSTRAINT DF_Servicios_categoria DEFAULT N'Preventivo'
-                    CONSTRAINT CK_Servicios_categoria CHECK (categoria IN (N'Preventivo', N'Frenos', N'Eléctrico', N'Suspensión', N'Motor')),
+                    CONSTRAINT CK_Servicios_categoria CHECK (categoria IN (N'Preventivo', N'Correctivo')),
     duracion_horas  DECIMAL(4,1)  NOT NULL CONSTRAINT DF_Servicios_duracion DEFAULT 1,
     garantia_meses  INT           NOT NULL CONSTRAINT DF_Servicios_garantia DEFAULT 1
 );

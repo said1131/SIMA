@@ -29,6 +29,19 @@ const expres = z.object({
   hora: HORA,
 });
 
+// Público: horas ocupadas para una fecha (usado por cita normal y cita exprés)
+citasRouter.get('/disponibilidad', ah(async (req, res) => {
+  const fecha = FECHA.parse(req.query.fecha);
+  ok(res, await svc.horariosOcupados(fecha));
+}));
+
+// Público: fechas del mes donde ya se ocuparon los 5 horarios
+citasRouter.get('/dias-llenos', ah(async (req, res) => {
+  const anio = z.coerce.number().int().min(2020).max(2100).parse(req.query.anio);
+  const mes = z.coerce.number().int().min(1).max(12).parse(req.query.mes);
+  ok(res, await svc.diasLlenosMes(anio, mes));
+}));
+
 citasRouter.get('/', requireAuth, ah(async (req, res) => {
   const estado = z.enum(CITA_ESTADOS).optional().parse(req.query.estado);
   ok(res, await svc.listar(req.user!, estado));
