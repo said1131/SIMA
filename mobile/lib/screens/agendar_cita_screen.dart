@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/servicio_model.dart';
 import '../services/api_client.dart';
 import '../services/datos.dart';
+import '../widgets/calendario_citas.dart';
 import 'registrar_vehiculo_screen.dart';
 
 class AgendarCitaScreen extends StatefulWidget {
@@ -17,11 +18,13 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
   late Servicio _servicioElegido;
   int _vehiculoIndex = 0;
 
-  late final List<DateTime> _fechasHabiles;
+  late DateTime _mesVisible;
   late DateTime _fechaElegida;
   String? _horaElegida;
 
+  Set<String> _diasLlenos = {};
   List<String> _horasOcupadas = [];
+  bool _cargandoMes = false;
   bool _cargandoHoras = false;
   bool _enviando = false;
 
@@ -32,42 +35,38 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
     super.initState();
     _servicioElegido = widget.servicioInicial;
     _vehiculoIndex = datos.vehiculoActivoIndex;
-    _fechasHabiles = _generarProximosDiasHabiles(21);
-    _fechaElegida = _fechasHabiles.first;
-    _cargarDisponibilidad();
-  }
 
-  List<DateTime> _generarProximosDiasHabiles(int cantidad) {
-    final hoy = DateTime.now();
-    final base = DateTime(hoy.year, hoy.month, hoy.day);
-    final lista = <DateTime>[];
-    int offset = 0;
-    while (lista.length < cantidad) {
-      final candidato = base.add(Duration(days: offset));
-      if (candidato.weekday != DateTime.sunday) {
-        lista.add(candidato);
-      }
-      offset++;
+    final ahora = DateTime.now();
+    var inicial = DateTime(ahora.year, ahora.month, ahora.day);
+    if (inicial.weekday == DateTime.sunday) {
+      inicial = inicial.add(const Duration(days: 1));
     }
-    return lista;
+    _fechaElegida = inicial;
+    _mesVisible = DateTime(inicial.year, inicial.month, 1);
+
+    _cargarMesYHoras();
   }
 
-  String _toIso(DateTime d) {
-    final y = d.year.toString();
-    final m = d.month.toString().padLeft(2, '0');
-    final day = d.day.toString().padLeft(2, '0');
-    return '$y-$m-$day';
+  Future<void> _cargarMesYHoras() async {
+    await Future.wait([
+      _cargarDiasLlenos(),
+      _cargarDisponibilidad(),
+    ]);
   }
 
-  String _etiquetaDia(DateTime d) {
-    const dias = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-    const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-    return '${dias[d.weekday - 1]} ${d.day} ${meses[d.month - 1]}';
+  Future<void> _cargarDiasLlenos() async {
+    setState(() => _cargandoMes = true);
+    final llenos = await datos.obtenerDiasLlenosMes(_mesVisible.year, _mesVisible.month);
+    if (!mounted) return;
+    setState(() {
+      _diasLlenos = llenos.toSet();
+      _cargandoMes = false;
+    });
   }
 
   Future<void> _cargarDisponibilidad() async {
     setState(() => _cargandoHoras = true);
-    final ocupadas = await datos.obtenerHorasOcupadas(_toIso(_fechaElegida));
+    final ocupadas = await datos.obtenerHorasOcupadas(CalendarioCitas.toIso(_fechaElegida));
     if (!mounted) return;
 
     final disponibles = _horarios.where((h) => !ocupadas.contains(h)).toList();
@@ -100,7 +99,7 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
       await datos.crearCita(
         vehiculoId: veh.idNumerico,
         servicioId: _servicioElegido.idNumerico,
-        fechaIso: _toIso(_fechaElegida),
+        fechaIso: CalendarioCitas.toIso(_fechaElegida),
         hora: _horaElegida!,
       );
       if (!mounted) return;
@@ -113,7 +112,7 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(ApiClient.mensajeError(e))),
       );
-      _cargarDisponibilidad();
+      _cargarMesYHoras();
     } finally {
       if (mounted) setState(() => _enviando = false);
     }
@@ -176,35 +175,21 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
                 onChanged: (v) => setState(() => _vehiculoIndex = v!),
               ),
             const SizedBox(height: 16),
-            const Text('Fecha disponible', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            const Text('Fecha', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
             const SizedBox(height: 8),
-            SizedBox(
-              height: 44,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: _fechasHabiles.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 8),
-                itemBuilder: (_, i) {
-                  final f = _fechasHabiles[i];
-                  final sel = _toIso(f) == _toIso(_fechaElegida);
-                  return ChoiceChip(
-                    label: Text(
-                      _etiquetaDia(f),
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: sel ? Colors.white : azulSima,
-                      ),
-                    ),
-                    selected: sel,
-                    selectedColor: azulSima,
-                    backgroundColor: Colors.white,
-                    onSelected: (_) {
-                      setState(() => _fechaElegida = f);
-                      _cargarDisponibilidad();
-                    },
-                  );
-                },
-              ),
+            CalendarioCitas(
+              mesVisible: _mesVisible,
+              fechaSeleccionada: _fechaElegida,
+              diasLlenosIso: _diasLlenos,
+              cargando: _cargandoMes,
+              onCambiarMes: (nuevoMes) {
+                setState(() => _mesVisible = nuevoMes);
+                _cargarDiasLlenos();
+              },
+              onSeleccionarFecha: (nuevaFecha) {
+                setState(() => _fechaElegida = nuevaFecha);
+                _cargarDisponibilidad();
+              },
             ),
             const SizedBox(height: 16),
             Row(

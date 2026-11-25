@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../services/api_client.dart';
 import '../services/datos.dart';
+import '../widgets/calendario_citas.dart';
 
 class CitaExpresScreen extends StatefulWidget {
   const CitaExpresScreen({super.key});
@@ -20,11 +22,13 @@ class _CitaExpresScreenState extends State<CitaExpresScreen> {
   final _placasCtrl = TextEditingController();
 
   int? _servicioId;
-  late final List<DateTime> _fechasHabiles;
+  late DateTime _mesVisible;
   late DateTime _fechaElegida;
   String? _horaElegida;
 
+  Set<String> _diasLlenos = {};
   List<String> _horasOcupadas = [];
+  bool _cargandoMes = false;
   bool _cargandoHoras = false;
   bool _enviada = false;
   bool _enviando = false;
@@ -34,38 +38,16 @@ class _CitaExpresScreenState extends State<CitaExpresScreen> {
   @override
   void initState() {
     super.initState();
-    _fechasHabiles = _generarProximosDiasHabiles(21);
-    _fechaElegida = _fechasHabiles.first;
-    _cargar();
-    _cargarDisponibilidad();
-  }
-
-  List<DateTime> _generarProximosDiasHabiles(int cantidad) {
-    final hoy = DateTime.now();
-    final base = DateTime(hoy.year, hoy.month, hoy.day);
-    final lista = <DateTime>[];
-    int offset = 0;
-    while (lista.length < cantidad) {
-      final candidato = base.add(Duration(days: offset));
-      if (candidato.weekday != DateTime.sunday) {
-        lista.add(candidato);
-      }
-      offset++;
+    final ahora = DateTime.now();
+    var inicial = DateTime(ahora.year, ahora.month, ahora.day);
+    if (inicial.weekday == DateTime.sunday) {
+      inicial = inicial.add(const Duration(days: 1));
     }
-    return lista;
-  }
+    _fechaElegida = inicial;
+    _mesVisible = DateTime(inicial.year, inicial.month, 1);
 
-  String _toIso(DateTime d) {
-    final y = d.year.toString();
-    final m = d.month.toString().padLeft(2, '0');
-    final day = d.day.toString().padLeft(2, '0');
-    return '$y-$m-$day';
-  }
-
-  String _etiquetaDia(DateTime d) {
-    const dias = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-    const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-    return '${dias[d.weekday - 1]} ${d.day} ${meses[d.month - 1]}';
+    _cargar();
+    _cargarMesYHoras();
   }
 
   Future<void> _cargar() async {
@@ -75,9 +57,28 @@ class _CitaExpresScreenState extends State<CitaExpresScreen> {
     }
   }
 
+  Future<void> _cargarMesYHoras() async {
+    await Future.wait([_cargarDiasLlenos(), _cargarDisponibilidad()]);
+  }
+
+  Future<void> _cargarDiasLlenos() async {
+    setState(() => _cargandoMes = true);
+    final llenos = await _datos.obtenerDiasLlenosMes(
+      _mesVisible.year,
+      _mesVisible.month,
+    );
+    if (!mounted) return;
+    setState(() {
+      _diasLlenos = llenos.toSet();
+      _cargandoMes = false;
+    });
+  }
+
   Future<void> _cargarDisponibilidad() async {
     setState(() => _cargandoHoras = true);
-    final ocupadas = await _datos.obtenerHorasOcupadas(_toIso(_fechaElegida));
+    final ocupadas = await _datos.obtenerHorasOcupadas(
+      CalendarioCitas.toIso(_fechaElegida),
+    );
     if (!mounted) return;
 
     final disponibles = _horarios.where((h) => !ocupadas.contains(h)).toList();
@@ -105,7 +106,11 @@ class _CitaExpresScreenState extends State<CitaExpresScreen> {
     }
     if (_horaElegida == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No hay horarios disponibles en esa fecha. Elige otro día.')),
+        const SnackBar(
+          content: Text(
+            'No hay horarios disponibles en esa fecha. Elige otro día.',
+          ),
+        ),
       );
       return;
     }
@@ -121,16 +126,15 @@ class _CitaExpresScreenState extends State<CitaExpresScreen> {
         anio: int.tryParse(_anioCtrl.text.trim()) ?? 2021,
         placas: _placasCtrl.text,
         servicioId: _servicioId!,
-        fechaIso: _toIso(_fechaElegida),
+        fechaIso: CalendarioCitas.toIso(_fechaElegida),
         hora: _horaElegida!,
       );
       if (mounted) setState(() => _enviada = true);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(ApiClient.mensajeError(e))),
-        );
-        _cargarDisponibilidad();
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(ApiClient.mensajeError(e))));
+        _cargarMesYHoras();
       }
     } finally {
       if (mounted) setState(() => _enviando = false);
@@ -142,13 +146,17 @@ class _CitaExpresScreenState extends State<CitaExpresScreen> {
     const azulSima = Color(0xFF102566);
     const rojoSima = Color(0xFFD92323);
 
-    final diaLleno = !_cargandoHoras && _horasOcupadas.length >= _horarios.length;
+    final diaLleno =
+        !_cargandoHoras && _horasOcupadas.length >= _horarios.length;
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0.5,
-        title: const Text('Cita exprés', style: TextStyle(color: azulSima, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Cita exprés',
+          style: TextStyle(color: azulSima, fontWeight: FontWeight.bold),
+        ),
       ),
       body: _enviada
           ? Center(
@@ -157,13 +165,29 @@ class _CitaExpresScreenState extends State<CitaExpresScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const CircleAvatar(radius: 36, backgroundColor: Color(0xFF1B8A4B), child: Icon(Icons.check, color: Colors.white, size: 42)),
+                    const CircleAvatar(
+                      radius: 36,
+                      backgroundColor: Color(0xFF1B8A4B),
+                      child: Icon(Icons.check, color: Colors.white, size: 42),
+                    ),
                     const SizedBox(height: 16),
-                    const Text('Solicitud enviada', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                    const Text(
+                      'Solicitud enviada',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 8),
-                    Text('El taller te contactará al ${_telCtrl.text} para confirmar.', textAlign: TextAlign.center),
+                    Text(
+                      'El taller te contactará al ${_telCtrl.text} para confirmar.',
+                      textAlign: TextAlign.center,
+                    ),
                     const SizedBox(height: 24),
-                    ElevatedButton(onPressed: () => Navigator.pop(context), child: const Text('Volver al inicio')),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Volver al inicio'),
+                    ),
                   ],
                 ),
               ),
@@ -173,79 +197,106 @@ class _CitaExpresScreenState extends State<CitaExpresScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(children: [
-                    Expanded(child: _input('Nombre *', 'Oswaldo', _nombreCtrl)),
-                    const SizedBox(width: 10),
-                    Expanded(child: _input('Apellidos *', 'Cruz', _apellidosCtrl)),
-                  ]),
+                  Row(
+                    children: [
+                      Expanded(child: _input('Nombre *', 'Pablo', _nombreCtrl)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _input('Apellidos *', 'Ruiz', _apellidosCtrl),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 12),
                   _input('Teléfono *', '9985550142', _telCtrl),
                   const SizedBox(height: 12),
-                  Row(children: [
-                    Expanded(child: _input('Marca *', 'Toyota', _marcaCtrl)),
-                    const SizedBox(width: 10),
-                    Expanded(child: _input('Modelo *', 'Hilux', _modeloCtrl)),
-                  ]),
+                  Row(
+                    children: [
+                      Expanded(child: _input('Marca *', 'Toyota', _marcaCtrl)),
+                      const SizedBox(width: 10),
+                      Expanded(child: _input('Modelo *', 'Hilux', _modeloCtrl)),
+                    ],
+                  ),
                   const SizedBox(height: 12),
-                  Row(children: [
-                    Expanded(child: _input('Año *', '2021', _anioCtrl)),
-                    const SizedBox(width: 10),
-                    Expanded(child: _input('Placas *', 'ABC-892', _placasCtrl)),
-                  ]),
+                  Row(
+                    children: [
+                      Expanded(child: _input('Año *', '2021', _anioCtrl)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _input('Placas *', 'ABC-987', _placasCtrl),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 12),
-                  const Text('Servicio *', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                  const Text(
+                    'Servicio *',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                  ),
                   const SizedBox(height: 6),
                   if (_datos.catalogo.isEmpty)
                     const LinearProgressIndicator()
                   else
                     DropdownButtonFormField<int>(
                       initialValue: _servicioId,
+                      isExpanded: true,
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: Colors.white,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide.none,
+                        ),
                       ),
-                      items: _datos.catalogo.map((s) => DropdownMenuItem(value: s.idNumerico, child: Text(s.titulo))).toList(),
+                      items: _datos.catalogo
+                          .map(
+                            (s) => DropdownMenuItem(
+                              value: s.idNumerico,
+                              child: Text(
+                                s.titulo,
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                            ),
+                          )
+                          .toList(),
                       onChanged: (v) => setState(() => _servicioId = v),
                     ),
                   const SizedBox(height: 16),
-                  const Text('Fecha disponible *', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                  const Text(
+                    'Fecha *',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                  ),
                   const SizedBox(height: 8),
-                  SizedBox(
-                    height: 44,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _fechasHabiles.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 8),
-                      itemBuilder: (_, i) {
-                        final f = _fechasHabiles[i];
-                        final sel = _toIso(f) == _toIso(_fechaElegida);
-                        return ChoiceChip(
-                          label: Text(
-                            _etiquetaDia(f),
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: sel ? Colors.white : azulSima,
-                            ),
-                          ),
-                          selected: sel,
-                          selectedColor: azulSima,
-                          backgroundColor: Colors.white,
-                          onSelected: (_) {
-                            setState(() => _fechaElegida = f);
-                            _cargarDisponibilidad();
-                          },
-                        );
-                      },
-                    ),
+                  CalendarioCitas(
+                    mesVisible: _mesVisible,
+                    fechaSeleccionada: _fechaElegida,
+                    diasLlenosIso: _diasLlenos,
+                    cargando: _cargandoMes,
+                    onCambiarMes: (nuevoMes) {
+                      setState(() => _mesVisible = nuevoMes);
+                      _cargarDiasLlenos();
+                    },
+                    onSeleccionarFecha: (nuevaFecha) {
+                      setState(() => _fechaElegida = nuevaFecha);
+                      _cargarDisponibilidad();
+                    },
                   ),
                   const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Hora disponible *', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                      const Text(
+                        'Hora disponible *',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
                       if (_cargandoHoras)
-                        const SizedBox(height: 14, width: 14, child: CircularProgressIndicator(strokeWidth: 2)),
+                        const SizedBox(
+                          height: 14,
+                          width: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -259,7 +310,11 @@ class _CitaExpresScreenState extends State<CitaExpresScreen> {
                       ),
                       child: const Text(
                         'Todos los horarios de este día están ocupados. Selecciona otra fecha.',
-                        style: TextStyle(color: rojoSima, fontWeight: FontWeight.w600, fontSize: 12),
+                        style: TextStyle(
+                          color: rojoSima,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
                       ),
                     )
                   else
@@ -273,14 +328,20 @@ class _CitaExpresScreenState extends State<CitaExpresScreen> {
                           label: Text(
                             sinCupo ? '$h (Ocupado)' : h,
                             style: TextStyle(
-                              decoration: sinCupo ? TextDecoration.lineThrough : null,
-                              color: elegida ? Colors.white : (sinCupo ? Colors.grey : Colors.black87),
+                              decoration: sinCupo
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                              color: elegida
+                                  ? Colors.white
+                                  : (sinCupo ? Colors.grey : Colors.black87),
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           selected: elegida,
                           selectedColor: azulSima,
-                          onSelected: sinCupo ? null : (_) => setState(() => _horaElegida = h),
+                          onSelected: sinCupo
+                              ? null
+                              : (_) => setState(() => _horaElegida = h),
                         );
                       }).toList(),
                     ),
@@ -289,11 +350,29 @@ class _CitaExpresScreenState extends State<CitaExpresScreen> {
                     width: double.infinity,
                     height: 48,
                     child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: rojoSima, foregroundColor: Colors.white),
-                      onPressed: (_enviando || _cargandoHoras || diaLleno) ? null : _enviar,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: rojoSima,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: (_enviando || _cargandoHoras || diaLleno)
+                          ? null
+                          : _enviar,
                       child: _enviando
-                          ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : const Text('Confirmar cita', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text(
+                              'Confirmar cita',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
                     ),
                   ),
                 ],
@@ -306,7 +385,10 @@ class _CitaExpresScreenState extends State<CitaExpresScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+        Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+        ),
         const SizedBox(height: 6),
         TextField(
           controller: ctrl,
@@ -314,7 +396,10 @@ class _CitaExpresScreenState extends State<CitaExpresScreen> {
             hintText: hint,
             filled: true,
             fillColor: Colors.white,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
+            ),
           ),
         ),
       ],

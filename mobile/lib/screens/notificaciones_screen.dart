@@ -49,7 +49,6 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
   Future<void> _abrirCotizacionDesdeNotificacion(NotificacionItem n) async {
     int? ordenId = n.refId;
 
-    // Si refId no vino directo, intentamos localizar la orden por folio en el detalle
     if (ordenId == null || ordenId == 0) {
       final coincidencias = datos.ordenes.where(
         (o) =>
@@ -129,7 +128,6 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
       ),
       body: Column(
         children: [
-          // Barra superior de filtros: Todas | Sin leer (X) | Marcar leídas
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
             child: Row(
@@ -271,7 +269,6 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
 
   Widget _tarjetaNotificacion(NotificacionItem n) {
     const azulSima = Color(0xFF102566);
-    const rojoSima = Color(0xFFD92323);
 
     final tipoLower = n.tipo.toLowerCase();
     final tonoLower = n.tono.toLowerCase();
@@ -318,105 +315,114 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
           : Icons.build_outlined;
     }
 
-    return Container(
+return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.only(left: 6),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colorCirculo,
         borderRadius: BorderRadius.circular(14),
-        border: !n.leida
-            ? const Border(left: BorderSide(color: rojoSima, width: 4))
-            : Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x07000000),
+            color: Color(0x09000000),
             blurRadius: 6,
             offset: Offset(0, 2),
           ),
         ],
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: colorCirculo,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(iconoCirculo, color: Colors.white, size: 19),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(10),
+            bottomLeft: Radius.circular(10),
+            topRight: Radius.circular(14),
+            bottomRight: Radius.circular(14),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        n.titulo,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: azulSima,
-                          height: 1.25,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: colorCirculo,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(iconoCirculo, color: Colors.white, size: 19),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          n.titulo,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: azulSima,
+                            height: 1.25,
+                          ),
                         ),
                       ),
-                    ),
-                    if (n.fecha.trim().isNotEmpty) ...[
-                      const SizedBox(width: 8),
-                      Text(
-                        n.fecha,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF6B7A99),
+                      if (n.fecha.trim().isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        Text(
+                          n.fecha,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF6B7A99),
+                          ),
                         ),
-                      ),
+                      ],
                     ],
-                  ],
-                ),
-                if (n.detalle.trim().isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    n.detalle,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF6B7A99),
-                    ),
                   ),
-                ],
-                if (esCotizacion) ...[
-                  const SizedBox(height: 10),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: azulSima,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    onPressed: () => _abrirCotizacionDesdeNotificacion(n),
-                    child: const Text(
-                      'Ver cotización',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
+                  if (n.detalle.trim().isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      n.detalle,
+                      style: const TextStyle(
                         fontSize: 12,
+                        color: Color(0xFF6B7A99),
                       ),
                     ),
-                  ),
+                  ],
+                  if (esCotizacion) ...[
+                    const SizedBox(height: 10),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: azulSima,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: () => _abrirCotizacionDesdeNotificacion(n),
+                      child: const Text(
+                        'Ver cotización',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

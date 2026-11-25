@@ -44,13 +44,35 @@ class _GarageScreenState extends State<GarageScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0.5,
-        title: const Row(
+        automaticallyImplyLeading: false,
+        titleSpacing: 16,
+        title: Row(
           children: [
-            Icon(Icons.settings, color: azulSima, size: 22),
-            SizedBox(width: 6),
-            Text('SIMA', style: TextStyle(color: rojoSima, fontWeight: FontWeight.w900, fontSize: 18)),
-            SizedBox(width: 10),
-            Text('Mi Garage', style: TextStyle(color: azulSima, fontWeight: FontWeight.bold, fontSize: 16)),
+            Image.asset(
+              'assets/images/logo.png',
+              height: 28,
+              fit: BoxFit.contain,
+              errorBuilder: (_, _, _) => const Text(
+                'SIMA',
+                style: TextStyle(
+                  color: rojoSima,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 18,
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            const Expanded(
+              child: Text(
+                'Mi Garage',
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: azulSima,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ),
           ],
         ),
         actions: [
