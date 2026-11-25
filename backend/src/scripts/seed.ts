@@ -14,12 +14,20 @@ import { sqlDate } from '../utils/format';
 const DEMO_PASSWORD = 'sima1234';
 
 const SERVICIOS = [
-  { nombre: 'Cambio de aceite y filtro', categoria: 'Preventivo', descripcion: 'Aceite sintético y filtro de aceite.', precio: 1200, duracion: 1, garantia: 3 },
-  { nombre: 'Frenos delanteros', categoria: 'Frenos', descripcion: 'Pastillas cerámicas y rectificado.', precio: 1950, duracion: 2, garantia: 6 },
-  { nombre: 'Afinación mayor', categoria: 'Preventivo', descripcion: 'Bujías, filtros y fluidos.', precio: 2850, duracion: 2.5, garantia: 6 },
-  { nombre: 'Alineación y balanceo', categoria: 'Suspensión', descripcion: 'Alineación 3D en las 4 ruedas.', precio: 780, duracion: 1, garantia: 3 },
-  { nombre: 'Diagnóstico con escáner', categoria: 'Eléctrico', descripcion: 'Lectura de códigos de falla.', precio: 450, duracion: 0.5, garantia: 1 },
-  { nombre: 'Limpieza de inyectores', categoria: 'Motor', descripcion: 'Limpieza ultrasónica de inyectores.', precio: 1200, duracion: 2, garantia: 3 },
+  { nombre: 'Cambios de aceite de motor', categoria: 'Preventivo', descripcion: 'Cambio de aceite multigrado o sintético, filtro de aceite y revisión de niveles.', precio: 950, duracion: 1, garantia: 3 },
+  { nombre: 'Lubricación', categoria: 'Preventivo', descripcion: 'Engrasado general de chasis, rótulas, terminales y puntos de articulación.', precio: 650, duracion: 1, garantia: 3 },
+  { nombre: 'Servicio al sistema de enfriamiento', categoria: 'Preventivo', descripcion: 'Limpieza de radiador, revisión de mangueras, termostato y cambio de anticongelante.', precio: 1100, duracion: 2, garantia: 6 },
+  { nombre: 'Alineación y balanceo', categoria: 'Preventivo', descripcion: 'Ajuste de ángulos de dirección y balanceo computarizado de las 4 ruedas.', precio: 850, duracion: 1, garantia: 3 },
+  { nombre: 'Frenos', categoria: 'Correctivo', descripcion: 'Revisión y reemplazo de balatas, rectificado de discos/tambores y purga de líquido.', precio: 1450, duracion: 2, garantia: 6 },
+  { nombre: 'Suspensiones', categoria: 'Correctivo', descripcion: 'Diagnóstico y cambio de amortiguadores, horquillas, bujes y bases.', precio: 1800, duracion: 3, garantia: 6 },
+  { nombre: 'Reparaciones de motor (medios ajustes y ajustes completos)', categoria: 'Correctivo', descripcion: 'Servicio estrella: rectificación, cambio de anillos, metales, empaques y ajuste completo.', precio: 8500, duracion: 24, garantia: 12 },
+  { nombre: 'Fallas electrónicas', categoria: 'Correctivo', descripcion: 'Diagnóstico con escáner automotriz, sensores, cableado y módulos electrónicos.', precio: 900, duracion: 2, garantia: 3 },
+  { nombre: 'Sistemas ABS', categoria: 'Correctivo', descripcion: 'Diagnóstico y reparación de sensores de rueda, módulo hidráulico y testigos ABS.', precio: 1600, duracion: 3, garantia: 6 },
+  { nombre: 'Transmisiones automáticas', categoria: 'Correctivo', descripcion: 'Diagnóstico, cambio de aceite ATF, filtro, solenoides y reparación de caja automática.', precio: 3200, duracion: 8, garantia: 6 },
+  { nombre: 'Transmisiones estándar', categoria: 'Correctivo', descripcion: 'Ajuste y reparación de caja manual, clutch, collarín y sincronizadores.', precio: 2800, duracion: 6, garantia: 6 },
+  { nombre: 'Hojalatería y pintura', categoria: 'Correctivo', descripcion: 'Enderezado de carrocería, igualación de color y acabado automotriz en cabina.', precio: 3500, duracion: 16, garantia: 12 },
+  { nombre: 'Sistema de dirección hidráulica, electroasistida y electrónica', categoria: 'Correctivo', descripcion: 'Reparación de cremallera, bomba hidráulica, columna electroasistida y sensores.', precio: 2200, duracion: 4, garantia: 6 },
+  { nombre: 'Elevadores, accesorios, puertas eléctricas y tableros', categoria: 'Correctivo', descripcion: 'Reparación de elevadores de cristales, seguros eléctricos, controles y tablero.', precio: 1100, duracion: 2, garantia: 3 },
 ];
 
 const addDays = (n: number): string => {
